@@ -1,0 +1,17 @@
+incident_id,category,date,latitude,longitude,source
+DEMO-001,theft,2026-10-01,17.4399,78.4983,synthetic_demo
+DEMO-002,harassment,2026-10-02,17.4435,78.5010,synthetic_demo
+DEMO-003,theft,2026-10-01,12.9716,77.5946,synthetic_demo
+DEMO-004,harassment,2026-10-02,12.9750,77.5980,synthetic_demo
+DEMO-005,theft,2026-10-01,28.6139,77.2090,synthetic_demo
+DEMO-006,harassment,2026-10-02,28.6170,77.2120,synthetic_demo
+DEMO-007,theft,2026-10-01,19.0760,72.8777,synthetic_demo
+DEMO-008,harassment,2026-10-02,19.0790,72.8810,synthetic_demo
+DEMO-009,theft,2026-10-01,13.0827,80.2707,synthetic_demo
+DEMO-010,harassment,2026-10-02,13.0860,80.2740,synthetic_demo
+DEMO-011,theft,2026-10-01,22.5726,88.3639,synthetic_demo
+DEMO-012,harassment,2026-10-02,22.5760,88.3670,synthetic_demo
+DEMO-013,theft,2026-10-01,16.5062,80.6480,synthetic_demo
+DEMO-014,harassment,2026-10-02,16.5095,80.6510,synthetic_demo
+DEMO-015,theft,2026-10-01,13.6288,79.4192,synthetic_demo
+DEMO-016,harassment,2026-10-02,13.6320,79.4225,synthetic_demo

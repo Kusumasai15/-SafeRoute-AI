@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "python build.py",
+  "functions": {
+    "main.py": {
+      "maxDuration": 60,
+      "includeFiles": "{app/templates/**,app/static/**,demo_data/**}"
+    }
+  }
+}
