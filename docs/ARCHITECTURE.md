@@ -44,7 +44,7 @@ One Flask process is enough for local use. No microservices, sync jobs or safety
 | Navigation GPS fixes | Browser memory only |
 | API key and Flask secret | Server `.env`/deployment environment |
 
-No route-evidence comparison is implemented in this version. SQLite is deliberate: spatial analysis has been removed from the first release. Do not reuse the old project's database; this schema does not replace its migrations. If verified route analysis is added later, introduce a separate evidence module and PostgreSQL/PostGIS with reviewed migrations at that time.
+Synthetic route-card metrics are calculated from the bundled safety and crime CSVs, but are not verified route evidence and never influence route selection. SQLite is deliberate: no real spatial safety analysis is implemented. Do not reuse the old project's database; this schema does not replace its migrations. If verified route analysis is added later, introduce a separate evidence module and PostgreSQL/PostGIS with reviewed migrations at that time.
 
 ## APIs
 
@@ -52,8 +52,8 @@ No route-evidence comparison is implemented in this version. SQLite is deliberat
 |---|---|---|
 | `/api/search?q=...` | GET | India place suggestions |
 | `/api/reverse?lat=...&lng=...` | GET | Current-location label |
-| `/api/routes` | POST | Up to two genuine provider candidates |
-| `/api/help?lat=...&lng=...` | GET | Police/hospital listings within 2 km |
+| `/api/routes` | POST | Up to three genuine provider candidates; fastest estimated travel time is selected by default, distance breaks ties |
+| `/api/help?lat=...&lng=...` | GET | Deduplicated police, hospital and pharmacy listings within a server-enforced 5 km radius; cached for five minutes |
 | `/api/reports` | GET/POST | Own reports / submit report |
 | `/api/reports/<id>` | DELETE | Delete an owned report |
 | `/admin/login` | GET/POST | Admin authentication |
@@ -73,6 +73,7 @@ Browser mutations carry a session CSRF token. Admin HTML forms use a hidden toke
 | Add | Share journey/location, arrival check-in, own report status/deletion, clear errors and privacy text |
 | Remove from this build | Dataset registry/import, source auditing/sync, OSM replication, PostGIS queries, route history, old overview |
 | Defer | Verified evidence comparison, Home/Work saved places, photos, traveller accounts, background alerts and live sharing |
-| Disable/omit | Numeric safety score, crime-risk ranking, safest-route label, unverified lighting estimates |
+| Synthetic demo data | Route-specific sample safety score and crime index, explicitly labeled synthetic and excluded from route choice |
+| Disable/omit | Real safety score, crime-risk ranking, safest-route label, unverified lighting estimates |
 
 This is a smaller release with intentionally different persistence and capabilities from the original README. It does not claim to preserve all previous functionality.

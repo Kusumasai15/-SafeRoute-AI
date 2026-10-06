@@ -11,7 +11,7 @@ def test_demo_metrics_use_new_samples(monkeypatch):
         "coordinates": [[78.4990, 17.4405], [78.5000, 17.4425]],
     })
     assert result["demo_safety_score"] == 73
-    assert result["demo_crime_rate"] == 27
+    assert result["demo_crime_index"] == 27
     assert result["status"] == "DEMO_RECORDS_FOUND"
     assert "working_light_count" not in result
 
@@ -21,7 +21,7 @@ def test_no_nearby_samples_remains_unknown():
         "type": "LineString", "coordinates": [[0, 0], [0.01, 0.01]],
     })
     assert result["demo_safety_score"] is None
-    assert result["demo_crime_rate"] is None
+    assert result["demo_crime_index"] is None
     assert result["status"] == "NO_DEMO_RECORDS_NEAR_ROUTE"
 
 
@@ -49,3 +49,17 @@ def test_same_samples_weighted_by_each_route(monkeypatch):
     second = demo_service.analyze_demo_route({'type': 'LineString', 'coordinates': [[-0.01, 0.01], [0.01, 0.01]]})
     assert first['safety_sample_ids'] == second['safety_sample_ids']
     assert first['demo_safety_score'] > second['demo_safety_score']
+
+
+def test_zero_demo_values_are_preserved(monkeypatch):
+    def records(filename, column):
+        metric = 'safety_score' if filename == 'safety.csv' else 'crime_rate'
+        return [{column: 'ZERO', 'point': [0, 0], 'radius_meters': 250, metric: 0}]
+
+    monkeypatch.setattr(demo_service, 'load_demo_records', records)
+    result = demo_service.analyze_demo_route({
+        'type': 'LineString',
+        'coordinates': [[-0.001, 0], [0.001, 0]],
+    })
+    assert result['demo_safety_score'] == 0
+    assert result['demo_crime_index'] == 0

@@ -13,6 +13,38 @@
 .nav-panel p:empty {display:none}
 .nav-actions {margin-top:12px}
 @media(max-width:800px){.map-hint{top:auto;left:50%;bottom:16px;max-width:calc(100% - 24px);padding:10px 16px;white-space:normal;text-align:center}.nav-panel{top:12px;left:12px;width:calc(100% - 72px);padding:14px}.nav-actions{flex-wrap:wrap}.nav-actions button{flex:1;padding:9px;font-size:12px}}
+.map-tools{right:12px;top:12px;gap:6px}
+.map-tools button{font-size:12px;padding:8px 10px;border-radius:10px;min-width:42px}
+.nav-panel{z-index:1100;width:min(390px,calc(100% - 92px));max-height:calc(100% - 105px);overflow:auto;border:1px solid #e7ece8}
+.turn-guidance{display:flex;align-items:center;gap:12px;margin-top:7px}
+.turn-guidance strong{margin:0;font-size:19px}
+.turn-icon{display:grid;place-items:center;flex:0 0 38px;height:38px;border-radius:12px;background:var(--pale);color:var(--green);font-size:25px;font-weight:700}
+.nav-panel p{line-height:1.45}
+.facility-toggles{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+.facility-toggle{display:flex;align-items:center;gap:6px;margin:0;padding:7px 9px;border:1px solid var(--border);border-radius:20px;background:white;font-size:11px;cursor:pointer}
+.facility-toggle input{width:auto;margin:0;accent-color:var(--green)}
+.facility-list-item[hidden]{display:none}
+.facility-list-item small{display:block;margin-top:4px;color:var(--muted)}
+.facility-marker{border:0;background:transparent}
+.facility-marker span{display:grid;place-items:center;width:28px;height:28px;border:2px solid white;border-radius:50%;background:#3157a4;color:white;font-size:13px;font-weight:700;box-shadow:0 2px 8px #17382f55}
+.facility-marker-hospital span{background:#b42335}
+.facility-marker-police span{background:#3157a4}
+.facility-marker-pharmacy span{background:#167a59}
+.user-location-icon{border:0;background:transparent}
+.user-arrow{display:block;width:30px;height:30px;border:3px solid white;border-radius:50%;background:#166449;box-shadow:0 2px 9px #17382f66;position:relative}
+.user-arrow::before{content:"";position:absolute;left:5px;top:-9px;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:14px solid #166449;filter:drop-shadow(0 -2px 1px white)}
+.user-arrow.heading-unknown{background:#166449aa}
+.user-arrow.heading-unknown::before{border-bottom-color:#64766f}
+@media(max-width:800px){
+  .map-tools{right:8px;top:8px}
+  .map-tools button{font-size:11px;padding:7px 8px}
+  .nav-panel{top:10px;left:10px;width:calc(100% - 100px);max-height:calc(100% - 100px);padding:12px}
+  .turn-guidance strong{font-size:16px}
+  .turn-icon{flex-basis:32px;height:32px;font-size:21px}
+  .nav-actions{gap:5px}
+  .nav-actions button{font-size:11px;padding:8px}
+  .map-hint{bottom:12px}
+}
 .route-card {
   display: block;
   width: 100%;

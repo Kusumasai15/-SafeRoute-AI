@@ -1,147 +1,177 @@
-# SafeWalk Simple
+# SafeWalk
 
-A fresh, simplified Flask journey companion. This ZIP is a new application, not a patch or database migration for your previous SafeWalk project.
+SafeWalk is a Flask web application for planning a journey, comparing route options with clearly labeled synthetic demo metrics, following a route with browser GPS, and finding nearby hospital, police, and pharmacy listings.
 
-## Included features
+**Public site:** [https://safewalk-eosin.vercel.app/](https://safewalk-eosin.vercel.app/)
 
-- Leaflet/OpenStreetMap map with responsive desktop/mobile layout.
-- India-filtered place autocomplete and current-location selection.
-- Walk, Cycle, Motorcycle and Car routing through Geoapify.
-- Up to **three** distinct route candidates: balanced, short, and an alternative avoiding a point midway along the balanced route. Fewer are shown if routes overlap or optional requests fail. Route numbers are not safety rankings.
-- A demo recommendation compares fictional safety/crime indices (80% combined), travel time (10%), and distance (10%). When any route lacks demo metrics, shortest travel time is recommended instead; distance breaks ties. The recommended route is selected by default.
-- Route-specific distance, estimated travel time and provider turn instructions.
-- Fullscreen map with GPS guidance, approximate remaining distance/time and off-route notices.
-- Nearby police/hospital listings within 5 km, using Geoapify Places (OSM-based).
-- Up to five browser-stored emergency contacts, primary-contact selection, edit/delete and explicit call actions.
-- Explicit 112 call link, current-location snapshot sharing, journey summary sharing and manual arrival check-in.
-- Reports with coordinates and a browser-owned status list; owner deletion.
-- Separate authenticated admin report-review page with required reasons and an audit trail.
-- Input validation, CSRF checks, hashed admin passwords and bounded process-level rate limits.
+## Features
 
-There is **no safety score, crime-risk estimate, safest-route label, verified lighting layer or automatic emergency dispatch**. Reports stay unverified even after review. Facility presence does not establish route safety.
+- Search for starting points and destinations, or use the device's current location.
+- Request walking, cycling, motorcycle, or driving routes from Geoapify. Up to three distinct options are shown; overlapping routes or provider failures can result in fewer.
+- Compare route distance, estimated travel time, a demo safety score, and a demo crime index. The fastest estimated route is selected by default; distance breaks ties. Demo metrics never rank or recommend routes.
+- Start GPS navigation with a moving position arrow, accuracy display, map-follow and recenter controls, provider turn instructions, remaining distance and estimated time, off-route feedback, and a manual arrival check-in.
+- Find Geoapify listings for hospitals, police stations, and pharmacies within 5 km. Filter categories, view distinct map markers, and inspect straight-line distances. Results are cached briefly by the running server process.
+- Save up to five emergency contacts in the browser, choose a primary contact, and use user-initiated call actions.
+- Prepare an emergency call link and shareable journey or location summaries. Messages and location snapshots are not sent automatically.
+- Submit location-based reports, review reports submitted by the current browser, and delete those reports. An authenticated admin can review or dismiss reports with a recorded reason.
 
-## Start on Windows (PowerShell)
+## Safety and data limitations
 
-Extract the ZIP into a new folder. Keep your old project as a backup. Open PowerShell in the extracted `safewalk-simple` folder (the one containing `run.py`).
+The bundled `demo_data/safety.csv` and `demo_data/crime.csv` files contain synthetic samples. The route-specific demo safety scores and crime indices are calculated from those CSV fields and nearby samples along route geometry; they are **not verified real-world measurements**. In particular, a crime index out of 100 is an index, **not a crime percentage or a population crime rate**.
+
+Missing demo samples remain unavailable and are displayed as “—”. They do not mean the route is safe, unsafe, or otherwise verified. The separate synthetic incidents CSV is retained as sample data but is not displayed on route cards or used to select routes.
+
+Nearby facility distances are straight-line distances, not walking or driving distances. Geoapify/OSM-based listings do not establish that a facility is open, staffed, or operational. Check facilities independently.
+
+GPS navigation requires browser location permission, a supported device, and sufficiently accurate location updates. Turn guidance and the moving arrow can be inaccurate when GPS reception is poor. Browser-based simulated GPS tests are not real-device GPS tests. Automatic rerouting is not provided.
+
+## Technology and architecture
+
+- **Backend:** Python, Flask, Flask-SQLAlchemy, SQLAlchemy, Requests, and Psycopg 3 for PostgreSQL.
+- **Map and client:** Leaflet 1.9.4, OpenStreetMap tiles, HTML, CSS, and browser JavaScript without a frontend framework.
+- **External services:** Geoapify Geocoding, Routing, and Places APIs. The Geoapify API key is used by Flask and is not sent to browser JavaScript.
+- **Storage:** SQLite for local development; PostgreSQL for Vercel deployments. Emergency contacts are stored in browser `localStorage`.
+
+The Flask app factory in `app/__init__.py` configures security and database access. `app/routes.py` implements the HTML pages and HTTP API. `app/services/geoapify.py` calls the map provider and normalizes routes and facility listings; `app/services/demo_service.py` calculates synthetic CSV metrics. The browser renders routes and map overlays and obtains GPS updates directly through the browser Geolocation API.
+
+## Project structure
+
+```text
+.
+├── app/
+│   ├── __init__.py           # Flask app factory, configuration, security
+│   ├── models.py             # Admin, report, and audit database models
+│   ├── routes.py             # Pages and JSON API endpoints
+│   ├── services/
+│   │   ├── demo_service.py   # Synthetic CSV route metrics
+│   │   └── geoapify.py       # Provider requests and normalization
+│   ├── static/               # Browser JavaScript and CSS
+│   └── templates/            # Traveller and admin HTML templates
+├── demo_data/                # Fictional safety, crime, and incident CSVs
+├── docs/                     # Architecture, validation, sources, Vercel notes
+├── public/static/            # Static assets copied for Vercel deployment
+├── tests/                    # Pytest API/service tests and Node client checks
+├── build.py                  # Copies app/static assets into public/static
+├── main.py                   # Vercel Flask entry point
+├── run.py                    # Local Flask entry point
+├── requirements.txt          # Runtime Python dependencies
+├── requirements-dev.txt      # Test dependency
+└── vercel.json               # Vercel build and function configuration
+```
+
+## Local setup on Windows
+
+Use Python 3.11 or newer. From PowerShell, change to the project folder containing `run.py` and run:
 
 ```powershell
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Open `.env` in VS Code or Notepad:
+Edit `.env` and replace the placeholders:
 
-1. Replace `FLASK_SECRET_KEY` with the random string printed by the last command.
-2. Replace `GEOAPIFY_API_KEY` with your Geoapify key.
-3. Leave `DATABASE_URL=sqlite:///safewalk.db` for local use.
-4. Keep `COOKIE_SECURE=false` for localhost.
+```dotenv
+FLASK_SECRET_KEY=<at-least-32-random-characters>
+GEOAPIFY_API_KEY=<your-Geoapify-API-key>
+DATABASE_URL=sqlite:///safewalk.db
+PORT=5000
+COOKIE_SECURE=false
+```
 
-Then start:
+Use the generated random value for `FLASK_SECRET_KEY`. Obtain `GEOAPIFY_API_KEY` from Geoapify; routing, geocoding, and facility search require a valid key. Keep `.env` private and do not commit it. Keep `COOKIE_SECURE=false` only for local HTTP development.
+
+Start the local server:
 
 ```powershell
 .\.venv\Scripts\python.exe run.py
 ```
 
-Open **http://127.0.0.1:5000**. No PowerShell activation-policy change is necessary because these commands use the virtual environment's Python directly.
+Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/). With the default SQLite URL, the app creates its database tables on local startup. The database file is stored under Flask's `instance` directory (normally `instance/safewalk.db`).
 
-## Start on Linux/macOS
-
-Use Python 3.11 or newer (recommended 3.12).
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-cp .env.example .env
-.venv/bin/python -c "import secrets; print(secrets.token_hex(32))"
-# Edit .env as described above.
-.venv/bin/python run.py
-```
-
-SQLite is created in `instance/safewalk.db` automatically. No PostGIS setup is needed for this simplified version. Do not point it at your old database. `create_all()` is for this fresh schema only; future schema changes need reviewed migrations.
-
-## Set up the administrator
-
-Windows:
+To create or reset an administrator account locally:
 
 ```powershell
 .\.venv\Scripts\python.exe -m flask --app run:app create-admin
 ```
 
-Linux/macOS:
+Follow the prompts. The username must be 1–80 characters and the password at least 12 characters.
 
-```bash
-.venv/bin/python -m flask --app run:app create-admin
+## Database configuration
+
+### Local SQLite
+
+The local default is:
+
+```dotenv
+DATABASE_URL=sqlite:///safewalk.db
 ```
 
-Enter a username and a password of at least 12 characters when prompted. Visit **http://127.0.0.1:5000/admin/login**. There is no default admin password. Running the command again for the same username resets its password.
+The application creates the local `instance` directory and tables automatically when it starts outside Vercel. Do not point this app at a different project's database.
 
-## Your API settings
+### Neon or another hosted PostgreSQL database
 
-The API key is read only by Flask; it is not embedded in HTML or JavaScript. The server needs access to `api.geoapify.com`. Enable/check autocomplete, reverse geocoding, routing and places services for your account. If you restrict a key, account for server-side requests; browser-referrer-only restrictions may reject them.
+The application includes `psycopg[binary]` and accepts PostgreSQL URLs beginning with `postgres://` or `postgresql://`, normalizing them to the Psycopg SQLAlchemy driver. Configure `DATABASE_URL` with the provider's connection string and required TLS/SSL options, for example:
 
-One route search makes three provider requests when balanced succeeds: balanced, short, and a balanced alternative avoiding the first route's midpoint. Autocomplete is debounced; nearby help makes additional Places requests. Provider quotas/credits apply. No automatic retries or background sync workers are included.
+```dotenv
+DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+```
 
-The browser loads Leaflet from unpkg, OSM raster tiles and optional Google Fonts (system-font fallback). An internet connection is required. This is not an offline navigation app.
+Never put a real connection string in source control. When `VERCEL=1`, the app requires PostgreSQL and does **not** call `db.create_all()`. This project has no migration scripts or automatic remote schema initialization. Before using a new hosted database, provision the tables defined in `app/models.py` using a reviewed schema/migration process and a database role with suitable permissions. Existing SQLite data is not copied to PostgreSQL.
 
-## Navigation and sharing boundaries
+## Deploy to Vercel
 
-GPS requires browser permission and HTTPS or localhost. Opening a phone at a laptop's plain HTTP LAN address may block GPS; use HTTPS when testing on another device. `127.0.0.1` on a phone refers to the phone, not your laptop.
+The deployment configuration is [vercel.json](./vercel.json):
 
-Navigation uses projection onto the selected route for approximate progress. Next-turn distances are straight-line estimates; remaining distance follows route geometry. ETA scales the original provider duration by remaining distance; it is not live traffic or a reliable countdown. GPS loops/parallel roads can make progress inaccurate. Guidance runs only while the page is active; no screen-lock/background guarantee, voice navigation, automatic rerouting or native-app functionality is claimed.
+- `main.py` exports the Flask application as `app`.
+- The configured build command is `python build.py`.
+- `build.py` copies `app/static/` into `public/static/`.
+- The Python function is configured with a 60-second maximum duration and includes `app/templates/`, `app/static/`, and `demo_data/`.
 
-Fullscreen uses an in-page expanded map, keeping turns, distance/time and emergency actions visible. The browser may retain its own address bar. Location sharing requests a fresh GPS fix and includes a timestamp/accuracy. It shares a snapshot, **not live tracking**. Sharing uses the device share sheet when supported and otherwise a copyable message. Arrival is user-confirmed, not automatically detected or sent.
+Deployment steps:
 
-## Reports and privacy
+1. Push this project to a Git repository and import it into Vercel. Set the Vercel project root to the directory containing `vercel.json`. Leave Output Directory unset and use the configured build command.
+2. Provision a hosted PostgreSQL database, such as Neon. Initialize its schema from the models in `app/models.py` before serving requests; automatic schema creation is disabled when `VERCEL=1`.
+3. Add these environment variables to the Vercel project for the environments you deploy:
 
-Reports are non-emergency submissions. They are not displayed as public incident markers or used to calculate risk. Admin states are `pending`, `reviewed`, and `dismissed`; there is no `verified` state. Do not submit personal details. Photos are intentionally omitted from the first version.
+   | Variable | Value |
+   | --- | --- |
+   | `FLASK_SECRET_KEY` | A stable random secret of at least 32 characters |
+   | `GEOAPIFY_API_KEY` | Your Geoapify key |
+   | `DATABASE_URL` | The hosted PostgreSQL URL, including required SSL options |
+   | `COOKIE_SECURE` | `true` |
 
-There are no traveller accounts. A signed HttpOnly browser cookie owns the report list; the database stores a hash of its visitor token. Reports cannot be accessed from another browser. Clearing cookies or changing the Flask secret removes access to that list. Delete reports before clearing cookies if removal is desired. Contacts are stored in localStorage on that device; use Privacy → Delete all saved contacts to remove them. Shared-device users may see contacts.
+   Vercel sets `VERCEL=1` for its deployment environment. Do not set a SQLite URL for the deployed app. Generate a secret locally with:
 
-Routes and GPS history are not stored in the database. Autocomplete queries/endpoints and requested help coordinates are sent to Geoapify. GPS watch updates stay in the browser. Report coordinates/text are saved on the server. Admin review history persists after report deletion and contains the report ID, reviewer, states and reason, not the report's coordinates/text; admins should avoid copying personal details into reasons. Review reasons/history are private to admins.
+   ```powershell
+   .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
+   ```
 
-## Test
+4. Deploy. Verify the deployment at [https://safewalk-eosin.vercel.app/](https://safewalk-eosin.vercel.app/) and check `/health`. Test provider-dependent features with valid Geoapify credentials and verify reports persist across requests.
+
+Vercel function instances are ephemeral. SQLite files are not durable there. The in-memory facility cache and request limiter are per process and are not shared among separate function instances.
+
+## Tests and build
+
+Run these commands from the project root in PowerShell:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m pytest -q
+node --check app\static\app.js
+node --check tests\client_logic.cjs
+node tests\client_logic.cjs
+.\.venv\Scripts\python.exe build.py
 ```
 
-On Linux/macOS use `.venv/bin/python` instead. Tests use disposable in-memory SQLite and mocked Geoapify data. They do not use your database, spend API credits or establish real safety evidence. See `docs/VALIDATION.md` for checks performed on this package and a manual browser checklist.
+The pytest suite exercises Flask routes, validation, CSRF, reports/admin workflows, route normalization, demo calculations, and mocked Geoapify provider responses, including facility radius filtering, deduplication, and caching. The Node client checks use mocked Leaflet and synthetic GPS positions for route selection, zero and missing score display, maneuver progression, GPS heading/jitter/errors/cleanup, map-follow controls, facility category toggles, and overlay layout contracts. They do not simulate movement in normal app operation and are not real-device GPS tests.
 
-## Deployment later
+`build.py` should be run before deploying if static assets have changed. Vercel runs it through the configured `buildCommand`.
 
-For Vercel, follow [the deployment steps](docs/VERCEL.md). The project includes
-a Flask entry point, static asset build, and hosted PostgreSQL support.
+## Data attribution
 
-This is a runnable local project, not an already hosted service. The development server binds to localhost. For a simple deployment install the included Waitress dependency and use:
-
-```bash
-waitress-serve --listen=127.0.0.1:8000 run:app
-```
-
-Put it behind a properly configured HTTPS reverse proxy, set `COOKIE_SECURE=true`, use a persistent volume for `instance/`, and keep `.env`/database files private. Do not expose Flask's development server. Configure infrastructure-level rate limits, request logging without sensitive query contents and appropriate backups. The built-in limiter is per process/IP and bounded to 4096 keys; it is not a distributed abuse-control system. Proxy IP handling must be configured only for a trusted proxy. Large public deployments need shared rate limiting, durable hosted storage and reviewed database migrations.
-
-## Documentation
-
-- `docs/ARCHITECTURE.md`: modules, data flow and feature decisions.
-- `docs/VALIDATION.md`: automated checks and manual verification.
-- `docs/SOURCES.md`: provider documentation and emergency-number source.
-- `.env.example`: settings to replace; no real credentials are included.
-
-## Troubleshooting
-
-| Issue | What to do |
-|---|---|
-| Secret-key error at startup | Generate a random secret of at least 32 characters; replace the example in `.env`. |
-| No autocomplete | Check key/account restrictions and internet; read the message under the field. Choose a suggestion, rather than just typing. |
-| No route | Check locations/mode. Some mapped areas do not have a routable connection. |
-| One route only | Both optimization requests may return the same road geometry. This is expected. |
-| GPS unavailable | Allow browser location permission; use HTTPS or localhost. |
-| Nearby help empty | Local mapping may be incomplete; this does not establish that help is absent. |
-| Form token error | Reload the page and retry. Signing in/out rotates the form token. |
-| Port 5000 in use | Set `PORT=5001` in `.env`, restart and open the matching address. |
-| Cannot sign in | Run `create-admin` again to reset the account password. |
-
-Keep secrets out of source control and do not upload `.env`, `instance/` or browser contact data.
+- Route, geocoding, and Places data are requested from **Geoapify**. Consult Geoapify's current terms, quotas, and attribution requirements.
+- The basemap uses **OpenStreetMap** standard tiles and displays OpenStreetMap attribution. Follow the [OpenStreetMap tile usage policy](https://operations.osmfoundation.org/policies/tiles/); these public tiles are not an offline or bulk-download service.
+- The safety, crime, and incident CSV files under `demo_data/` are synthetic project demo data, not verified external datasets.
+- Facility listings may be based on OpenStreetMap data. Their presence does not establish opening hours, staffing, or operational status.

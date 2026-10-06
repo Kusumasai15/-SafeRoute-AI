@@ -1,12 +1,18 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const state = {start:null,end:null,routes:[],selected:0,watch:null,position:null,navIndex:0,layers:[],helpLayers:[],endpoints:[],marker:null,accuracy:null,requestId:0};
+const FACILITY_CATEGORIES = [
+  {id:'healthcare.hospital',label:'Hospitals',color:'#b42335',icon:'H'},
+  {id:'service.police',label:'Police stations',color:'#3157a4',icon:'P'},
+  {id:'healthcare.pharmacy',label:'Pharmacies',color:'#167a59',icon:'+'}
+];
+const state = {start:null,end:null,routes:[],selected:0,watch:null,navGeneration:0,position:null,lastHeading:null,lastMovement:null,lastArrowPosition:null,followMap:true,navIndex:0,layers:[],helpLayers:[],endpoints:[],marker:null,accuracy:null,requestId:0,facilityRequestId:0,lastFacilityPosition:null,lastFacilityRequestPosition:null,lastFacilityRefresh:0,facilityTimer:null,facilityVisible:new Set(FACILITY_CATEGORIES.map(category=>category.id))};
 const token = document.querySelector('meta[name="csrf-token"]').content;
 let map = null;
 if (typeof L !== 'undefined') {
   map = L.map('map',{zoomControl:false}).setView([22.5,79],5);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
-  L.control.zoom({position:'topleft'}).addTo(map);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  map.on('dragstart',()=>setMapFollow(false));
   map.on('click',event=>{ $('report-lat').value=event.latlng.lat.toFixed(6);$('report-lng').value=event.latlng.lng.toFixed(6); });
 } else $('map-failure').hidden=false;
 async function api(path,options={}) {
@@ -19,10 +25,9 @@ function node(tag,text,className){const el=document.createElement(tag);if(text!=
 function status(message,error=false){$('status').textContent=message;$('status').className=error?'error':'';}
 function km(distance){return distance<1000?`${Math.round(distance)} m`:`${(distance/1000).toFixed(1)} km`;}
 function minutes(seconds){const m=Math.max(1,Math.round(seconds/60));return m<60?`${m} min`:`${Math.floor(m/60)} h ${m%60} min`;}
-function flat(route){return route.geometry.type==='LineString'?route.geometry.coordinates:route.geometry.coordinates.flat();}
 function choosePoint(id,place){state[id]=place;$(id).value=place.label;$(id+'-options').replaceChildren();invalidateJourney();}
 function invalidateJourney(){
-  stopNavigation();state.routes=[];state.requestId++;$('route-section').hidden=true;
+  stopNavigation();state.routes=[];state.requestId++;state.facilityRequestId++;state.lastFacilityPosition=null;state.lastFacilityRequestPosition=null;$('route-section').hidden=true;clearHelp();
   state.layers.forEach(layer=>map?.removeLayer(layer));state.layers=[];
   state.endpoints.forEach(layer=>map?.removeLayer(layer));state.endpoints=[];
   $('map-hint').hidden=false;$('map-hint').textContent='Your next journey starts here';
@@ -50,9 +55,20 @@ function gps(){return new Promise((resolve,reject)=>{
   navigator.geolocation.getCurrentPosition(resolve,()=>reject(new Error('Location unavailable. Allow location access and use HTTPS or localhost.')),{enableHighAccuracy:true,timeout:15000,maximumAge:0});
 });}
 function displayPosition(position){
-  state.position=position;const {latitude:lat,longitude:lng,accuracy}=position.coords;
-  if(map){if(!state.marker)state.marker=L.circleMarker([lat,lng],{radius:8,color:'white',weight:3,fillColor:'#166449',fillOpacity:1}).addTo(map);else state.marker.setLatLng([lat,lng]);
-    if(!state.accuracy)state.accuracy=L.circle([lat,lng],{radius:accuracy,color:'#166449',weight:1,fillOpacity:.08}).addTo(map);else state.accuracy.setLatLng([lat,lng]).setRadius(accuracy);}
+  state.position=position;const {latitude:lat,longitude:lng,accuracy}=position.coords,point=[lat,lng];
+  if(map){
+    if(!state.accuracy)state.accuracy=L.circle(point,{radius:accuracy,color:'#166449',weight:1,fillOpacity:.08}).addTo(map);else state.accuracy.setLatLng(point).setRadius(accuracy);
+    if(!state.marker){
+      state.marker=L.marker(point,{icon:L.divIcon({className:'user-location-icon',html:'<span class="user-arrow heading-unknown"></span>',iconSize:[30,30],iconAnchor:[15,15]}),zIndexOffset:1200}).addTo(map);
+      state.lastArrowPosition=[lng,lat];
+    }else if(!state.lastArrowPosition||meters([state.lastArrowPosition[0],state.lastArrowPosition[1]],[lng,lat])>=Math.max(3,Math.min(accuracy*.25,12))){
+      state.marker.setLatLng(point);state.lastArrowPosition=[lng,lat];
+    }
+    if(state.lastHeading!==null){
+      const arrow=state.marker.getElement()?.querySelector('.user-arrow');
+      if(arrow){arrow.classList.remove('heading-unknown');arrow.style.transform=`rotate(${state.lastHeading}deg)`;}
+    }
+  }
 }
 $('locate').addEventListener('click',async()=>{
   $('locate').disabled=true;status('Finding your location…');
@@ -64,8 +80,8 @@ $('plan-form').addEventListener('submit',async event=>{
   event.preventDefault();if(!state.start||!state.end)return status('Choose both locations from the search suggestions, or use current location.',true);
   invalidateJourney();const mine=state.requestId;$('find').disabled=true;status('Finding your routes…');
   try{const result=await api('/routes',{method:'POST',body:JSON.stringify({start:[state.start.lat,state.start.lng],end:[state.end.lat,state.end.lng],mode:$('mode').value})});
-    if(mine!==state.requestId)return;state.routes=result.routes;state.selected=0;renderRoutes();$('route-section').hidden=false;$('route-count').textContent=`${result.routes.length} option${result.routes.length===1?'':'s'}`;
-    status(result.warnings.join(' ')||(result.routes.length===1?'One distinct route returned.':'Choose a route below.'));fitRoute();
+    if(mine!==state.requestId)return;state.routes=result.routes;state.selected=Math.max(0,result.routes.findIndex(route=>route.recommended));renderRoutes();$('route-section').hidden=false;$('route-count').textContent=`${result.routes.length} option${result.routes.length===1?'':'s'}`;
+    status(result.warnings.join(' ')||(result.routes.length===1?'One distinct route returned.':'Choose a route below.'));fitRoute();loadFacilities(state.start.lat,state.start.lng);
   }catch(error){if(mine===state.requestId)status(error.message,true);}finally{$('find').disabled=false;}
 });
 function renderRoutes() {
@@ -108,10 +124,7 @@ function renderRoutes() {
     );
 
     header.append(title, travel);
-    card.append(
-      header,
-      node('span', 'DEMO COMPARISON', 'demo-badge')
-    );
+    card.append(header,node('span','SYNTHETIC DEMO DATA','demo-badge'));
 
     const demo = route.demo;
     const available =
@@ -144,12 +157,6 @@ function renderRoutes() {
 
     statistics.append(
       statistic(
-        available && Number.isInteger(demo.incident_count)
-          ? String(demo.incident_count)
-          : '—',
-        'Sample incidents'
-      ),
-      statistic(
         score(demo?.demo_safety_score),
         'Demo safety score'
       ),
@@ -161,13 +168,7 @@ function renderRoutes() {
 
     card.append(statistics);
 
-    const note = !available
-      ? 'Demo data unavailable.'
-      : demo.status === 'NO_DEMO_RECORDS_NEAR_ROUTE'
-        ? 'No demo records within 250 m. Safety is unknown.'
-        : 'Synthetic demo only. These indices are not real safety or crime rates.';
-
-    card.append(node('p', note, 'demo-card-note'));
+    card.append(node('p',available?'Synthetic demo only — not real safety or crime rates.':'Synthetic demo only — not real safety or crime rates. Demo data unavailable.','demo-card-note'));
 
     function selectRoute() {
       stopNavigation();
@@ -237,39 +238,137 @@ function renderRoutes() {
     }
   }
 }
-function fitRoute(){if(map&&state.layers[state.selected])map.fitBounds(state.layers[state.selected].getBounds(),{padding:[35,35]});}
+function fitRoute(){if(map&&state.layers[state.selected])map.fitBounds(state.layers[state.selected].getBounds(),{padding:[50,50]});}
 $('fit').addEventListener('click',()=>{if(state.routes.length)fitRoute();else if(state.position)map?.setView([state.position.coords.latitude,state.position.coords.longitude],16);});
+function setMapFollow(enabled){state.followMap=enabled;$('follow').textContent=`Follow: ${enabled?'On':'Off'}`;$('follow').setAttribute('aria-pressed',String(enabled));$('follow').setAttribute('aria-label',`Map follow ${enabled?'on':'off'}`);}
+$('follow').addEventListener('click',()=>setMapFollow(!state.followMap));
+$('recenter').addEventListener('click',()=>{if(!state.position)return status('Current location is not available yet.',true);setMapFollow(true);map?.setView([state.position.coords.latitude,state.position.coords.longitude],17);});
 function expand(force){const shell=$('map-shell');shell.classList.toggle('expanded',force??!shell.classList.contains('expanded'));$('expand').setAttribute('aria-label',shell.classList.contains('expanded')?'Close expanded map':'Expand map');setTimeout(()=>map?.invalidateSize(),50);}
 $('expand').addEventListener('click',()=>expand());document.addEventListener('keydown',event=>{if(event.key==='Escape')expand(false);});
 function meters(a,b){const rad=x=>x*Math.PI/180;const h=Math.sin(rad(b[1]-a[1])/2)**2+Math.cos(rad(a[1]))*Math.cos(rad(b[1]))*Math.sin(rad(b[0]-a[0])/2)**2;return 12742000*Math.asin(Math.min(1,Math.sqrt(h)));}
-function nearestProgress(p,line){
-  let best={distance:Infinity,index:0,along:0},traveled=0;
-  for(let i=0;i<line.length-1;i++){
-    const a=line[i],b=line[i+1],scale=Math.cos(p[1]*Math.PI/180),ax=(a[0]-p[0])*scale*111320,ay=(a[1]-p[1])*111320,bx=(b[0]-p[0])*scale*111320,by=(b[1]-p[1])*111320,dx=bx-ax,dy=by-ay;
-    const t=dx*dx+dy*dy?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/(dx*dx+dy*dy))):0,dist=Math.hypot(ax+t*dx,ay+t*dy),length=meters(a,b);
-    if(dist<best.distance)best={distance:dist,index:i+t,along:traveled+t*length};traveled+=length;
-  }return {...best,total:traveled};
+function routeParts(route){return route.geometry.type==='LineString'?[route.geometry.coordinates]:route.geometry.coordinates;}
+function nearestProgress(p,route){
+  let best={distance:Infinity,index:0,along:0,total:0},globalIndex=0,total=0;
+  for(const part of routeParts(route))for(let i=0;i<part.length-1;i++){total+=meters(part[i],part[i+1]);}
+  let traveled=0;
+  for(const part of routeParts(route)){
+    for(let i=0;i<part.length-1;i++){
+      const a=part[i],b=part[i+1],scale=Math.cos(p[1]*Math.PI/180),ax=(a[0]-p[0])*scale*111320,ay=(a[1]-p[1])*111320,bx=(b[0]-p[0])*scale*111320,by=(b[1]-p[1])*111320,dx=bx-ax,dy=by-ay;
+      const t=dx*dx+dy*dy?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/(dx*dx+dy*dy))):0,dist=Math.hypot(ax+t*dx,ay+t*dy),length=meters(a,b);
+      if(dist<best.distance)best={distance:dist,index:globalIndex+i+t,along:traveled+t*length,total};
+      traveled+=length;
+    }
+    globalIndex+=part.length;
+  }
+  return best;
+}
+function distanceAtRouteIndex(route,index){
+  let traveled=0,vertexIndex=0;
+  for(const part of routeParts(route)){
+    for(let i=0;i<part.length-1;i++){
+      const length=meters(part[i],part[i+1]),segmentIndex=vertexIndex+i;
+      if(index<=segmentIndex+1)return traveled+length*Math.max(0,Math.min(1,index-segmentIndex));
+      traveled+=length;
+    }
+    vertexIndex+=part.length;
+  }
+  return traveled;
+}
+function bearing(a,b){
+  const radians=value=>value*Math.PI/180,lat1=radians(a[1]),lat2=radians(b[1]),delta=radians(b[0]-a[0]);
+  return (Math.atan2(Math.sin(delta)*Math.cos(lat2),Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(delta))*180/Math.PI+360)%360;
+}
+function updateHeading(position){
+  const {longitude,latitude,accuracy,heading,speed}=position.coords,point=[longitude,latitude];
+  if(accuracy<=50&&Number.isFinite(heading)&&heading>=0&&Number.isFinite(speed)&&speed>=1.5){
+    state.lastHeading=heading;
+    state.lastMovement={point,accuracy};
+    return;
+  }
+  if(accuracy>40)return;
+  if(!state.lastMovement){state.lastMovement={point,accuracy};return;}
+  const moved=meters(state.lastMovement.point,point),minimum=Math.max(8,Math.min(25,(accuracy+state.lastMovement.accuracy)*.75));
+  if(moved>=minimum){
+    state.lastHeading=bearing(state.lastMovement.point,point);
+    state.lastMovement={point,accuracy};
+  }
+}
+function setInstruction(text,icon){$('instruction').textContent=text;$('turn-icon').textContent=icon;}
+function instructionIcon(text){
+  if(/u[- ]?turn/i.test(text))return '↩';
+  if(/left/i.test(text))return '↶';
+  if(/right/i.test(text))return '↷';
+  if(/roundabout/i.test(text))return '⟳';
+  if(/straight|continue|head|destination/i.test(text))return '↑';
+  return '•';
 }
 function updateNavigation(position){
-  displayPosition(position);const route=state.routes[state.selected];if(!route)return;
-  const p=[position.coords.longitude,position.coords.latitude],line=flat(route),progress=nearestProgress(p,line);
-  map?.panTo([p[1],p[0]],{animate:false});
-  if(position.coords.accuracy>100){$('instruction').textContent='GPS accuracy is low';$('progress').textContent='Wait for a better location fix. Route progress may be inaccurate.';return;}
-  if(progress.distance>Math.max(60,position.coords.accuracy*2)){$('instruction').textContent='You appear to be off this route';$('progress').textContent='Stop safely and plan a new route if needed. Automatic rerouting is unavailable.';return;}
+  updateHeading(position);displayPosition(position);
+  const route=state.routes[state.selected];if(!route)return;
+  const accuracy=position.coords.accuracy,p=[position.coords.longitude,position.coords.latitude],progress=nearestProgress(p,route);
+  maybeRefreshFacilities(position);
+  if(state.followMap)map?.panTo([p[1],p[0]],{animate:false});
+  if(accuracy>100){setInstruction('GPS accuracy is low','!');$('progress').textContent=`Wait for a better location fix (±${Math.round(accuracy)} m).`;return;}
+  if(progress.distance>Math.max(60,accuracy*2)){
+    setInstruction('You appear to be off this route','!');
+    $('progress').textContent=`You are about ${km(progress.distance)} from the route. Stop safely and plan a new route; automatic rerouting is unavailable. GPS accuracy ±${Math.round(accuracy)} m.`;
+    return;
+  }
   state.navIndex=progress.index;
-  const step=route.steps.find(s=>s.index>progress.index+.3);
-  $('instruction').textContent=step?step.text:'Continue to your destination';
+  const upcoming=(route.steps||[]).find(step=>distanceAtRouteIndex(route,step.index)>=progress.along-Math.max(10,accuracy));
   const remaining=Math.max(0,progress.total-progress.along),fraction=progress.total?remaining/progress.total:0;
-  const ahead=step?meters(p,step.point):0;
-  $('progress').textContent=`${step?`Next turn about ${km(ahead)} away · `:''}${km(remaining)} remaining · ${minutes(route.duration*fraction)} estimated`;
-  if(remaining<30&&meters(p,line[line.length-1])<40){$('instruction').textContent='Near your destination';$('progress').textContent='Confirm your arrival when you reach your destination.';}
+  $('map-hint').textContent=`${km(remaining)} remaining · ${minutes(route.duration*fraction)} estimated`;
+  const parts=routeParts(route),lastPart=parts[parts.length-1],endpoint=lastPart&&lastPart[lastPart.length-1];
+  if(remaining<30&&endpoint&&meters(p,endpoint)<Math.max(40,accuracy*1.5)){
+    setInstruction('Near your destination','✓');$('progress').textContent='Confirm your arrival when you reach your destination.';
+  }else if(upcoming){
+    const toManeuver=Math.max(0,distanceAtRouteIndex(route,upcoming.index)-progress.along);
+    const action=upcoming.text.replace(/[.!?]+$/,'');
+    setInstruction(`${action} in ${km(toManeuver)}`,instructionIcon(upcoming.text));
+    $('progress').textContent=`${km(remaining)} remaining · ${minutes(route.duration*fraction)} estimated · GPS accuracy ±${Math.round(accuracy)} m`;
+  }else if(route.steps?.length){
+    setInstruction('Continue to your destination','↑');
+    $('progress').textContent=`${km(remaining)} remaining · ${minutes(route.duration*fraction)} estimated · GPS accuracy ±${Math.round(accuracy)} m`;
+  }else{
+    setInstruction('Turn instructions unavailable','•');
+    $('progress').textContent=`Follow the highlighted route. ${km(remaining)} remaining · ${minutes(route.duration*fraction)} estimated · GPS accuracy ±${Math.round(accuracy)} m`;
+  }
 }
-$('navigate').addEventListener('click',()=>{
-  if(!state.routes.length)return;if(!navigator.geolocation)return status('Location is unavailable in this browser.',true);
-  stopNavigation();state.navIndex=0;$('nav-panel').hidden=false;$('map-hint').hidden=true;$('instruction').textContent='Waiting for GPS…';$('progress').textContent='Allow location access to start guidance.';expand(true);map?.setZoom(17);
-  state.watch=navigator.geolocation.watchPosition(updateNavigation,()=>{$('instruction').textContent='GPS unavailable';$('progress').textContent='Allow location access or end navigation and retry.';},{enableHighAccuracy:true,timeout:15000,maximumAge:0});
-});
-function stopNavigation(){if(state.watch!==null){navigator.geolocation.clearWatch(state.watch);state.watch=null;}$('nav-panel').hidden=true;$('map-hint').hidden=false;}
+function navigationError(error){
+  const message=error.code===1?'Location permission denied. Allow location access in your browser settings.':error.code===2?'GPS location is unavailable. Check location services and retry.':'GPS timed out. Move to a clearer area or retry.';
+  if(state.watch!==null){navigator.geolocation.clearWatch(state.watch);state.watch=null;}
+  setInstruction('GPS unavailable','!');$('progress').textContent=message;
+  $('retry-gps').hidden=false;
+  status(message,true);
+}
+function startNavigation(){
+  if(!state.routes.length)return;
+  if(!navigator.geolocation)return status('Location is unavailable in this browser.',true);
+  stopNavigation();state.navIndex=0;state.lastMovement=null;state.lastHeading=null;$('nav-panel').hidden=false;$('map-hint').hidden=false;
+  $('retry-gps').hidden=true;
+  setInstruction('Waiting for GPS…','•');$('progress').textContent='Allow location access to start turn-by-turn guidance.';
+  setMapFollow(true);expand(true);map?.setZoom(17);
+  const generation=state.navGeneration;
+  try{state.watch=navigator.geolocation.watchPosition(
+    position=>{if(state.watch!==null&&state.navGeneration===generation)updateNavigation(position);},
+    error=>{if(state.watch!==null&&state.navGeneration===generation)navigationError(error);},
+    {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+  );}
+  catch(error){navigationError({code:2});}
+}
+$('navigate').addEventListener('click',startNavigation);
+$('retry-gps').addEventListener('click',startNavigation);
+function stopNavigation(){
+  state.navGeneration++;
+  if(state.watch!==null){navigator.geolocation.clearWatch(state.watch);state.watch=null;}
+  if(state.facilityTimer!==null){clearTimeout(state.facilityTimer);state.facilityTimer=null;}
+  state.lastMovement=null;state.lastHeading=null;state.lastFacilityPosition=null;
+  state.lastFacilityRequestPosition=null;
+  const arrow=state.marker?.getElement()?.querySelector('.user-arrow');
+  if(arrow){arrow.classList.add('heading-unknown');arrow.style.transform='';}
+  $('retry-gps').hidden=true;
+  $('nav-panel').hidden=true;$('map-hint').hidden=false;
+}
 $('stop').addEventListener('click',()=>{stopNavigation();expand(false);fitRoute();});window.addEventListener('pagehide',stopNavigation);
 function openDialog(id){if(id==='contacts-dialog'||id==='emergency-dialog')renderContacts();if(id==='reports-dialog')loadReports();$(id).showModal();}
 document.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',()=>openDialog(button.dataset.open)));
@@ -306,17 +405,99 @@ $('share').addEventListener('click',()=>{
 });
 $('share-location').addEventListener('click',async()=>{try{const position=await gps();displayPosition(position);$('emergency-dialog').close();await shareText(`Please check in with me. My location at ${new Date(position.timestamp).toLocaleString()} is:\n${locationLink(position)}\nGPS accuracy: about ${Math.round(position.coords.accuracy)} m. This is a location snapshot, not live tracking.`);}catch(error){alert(error.message);}});
 $('arrival').addEventListener('click',()=>{if(!confirm('Confirm that you have arrived at your destination?'))return;stopNavigation();expand(false);shareText(`I’ve arrived at ${state.end?.label||'my destination'}. Checked in at ${new Date().toLocaleString()}.`);});
+function setupFacilityToggles(){
+  const toggles=$('facility-toggles');toggles.replaceChildren();
+  FACILITY_CATEGORIES.forEach(category=>{
+    const label=node('label',undefined,'facility-toggle'),checkbox=node('input');
+    checkbox.type='checkbox';checkbox.checked=state.facilityVisible.has(category.id);
+    checkbox.addEventListener('change',()=>{
+      if(checkbox.checked)state.facilityVisible.add(category.id);else state.facilityVisible.delete(category.id);
+      applyFacilityVisibility();
+    });
+    label.append(checkbox,node('span',category.label));toggles.append(label);
+  });
+}
+function applyFacilityVisibility(){
+  state.helpLayers.forEach(item=>{
+    if(!map)return;
+    if(state.facilityVisible.has(item.category)){if(!map.hasLayer(item.layer))item.layer.addTo(map);}
+    else if(map.hasLayer(item.layer))map.removeLayer(item.layer);
+  });
+  document.querySelectorAll('.facility-list-item').forEach(item=>{
+    item.hidden=!state.facilityVisible.has(item.dataset.category);
+  });
+}
+function renderFacilities(places){
+  const list=$('help-list');list.replaceChildren();
+  state.helpLayers.forEach(item=>map?.removeLayer(item.layer));state.helpLayers=[];
+  if(!places.length){list.append(node('p','No matching facilities were returned within 5 km. This does not mean help is unavailable.','muted small'));return;}
+  places.forEach(place=>{
+    const category=FACILITY_CATEGORIES.find(item=>item.id===place.category);
+    if(!category)return;
+    const row=node('div',undefined,'help-item facility-list-item');row.dataset.category=place.category;
+    const button=node('button',place.name);button.type='button';
+    button.addEventListener('click',()=>map?.setView([place.lat,place.lng],17));
+    row.append(button,node('small',`${place.category_label} · ${km(place.distance)} straight-line distance`));
+    list.append(row);
+    if(map){
+      const marker=L.marker([place.lat,place.lng],{
+        icon:L.divIcon({className:`facility-marker facility-marker-${category.icon==='+'?'pharmacy':category.icon==='H'?'hospital':'police'}`,html:`<span>${category.icon}</span>`,iconSize:[30,30],iconAnchor:[15,15]}),
+        title:`${place.name}; ${place.category_label}; ${km(place.distance)} straight-line distance`
+      }).bindPopup(node('span',`${place.name} · ${place.category_label} · ${km(place.distance)} straight-line distance`));
+      state.helpLayers.push({layer:marker,category:place.category});
+    }
+  });
+  applyFacilityVisibility();
+}
+setupFacilityToggles();
+async function loadFacilities(latitude,longitude,centerLabel='selected location'){
+  const requestId=++state.facilityRequestId;
+  state.lastFacilityRequestPosition=[longitude,latitude];state.lastFacilityRefresh=Date.now();
+  $('help-section').hidden=false;$('facility-status').textContent='Loading nearby facility listings…';
+  try{
+    const result=await api(`/help?lat=${latitude}&lng=${longitude}`);
+    if(requestId!==state.facilityRequestId)return false;
+    renderFacilities(result.places);
+    $('facility-status').textContent=`Showing facilities within 5 km of your ${centerLabel}. Straight-line distances; operational status is unverified.`;
+    state.lastFacilityPosition=[longitude,latitude];
+    return true;
+  }catch(error){
+    if(requestId===state.facilityRequestId)$('facility-status').textContent=`Nearby facility listings unavailable: ${error.message}`;
+    return false;
+  }
+}
+function maybeRefreshFacilities(position){
+  if(position.coords.accuracy>50)return;
+  const point=[position.coords.longitude,position.coords.latitude],last=state.lastFacilityPosition||state.lastFacilityRequestPosition;
+  if(!last&&state.watch!==null){loadFacilities(point[1],point[0],'current location');return;}
+  const moved=last?meters(last,point):Infinity,elapsed=Date.now()-state.lastFacilityRefresh;
+  if(moved<300)return;
+  if(elapsed>=60000){loadFacilities(point[1],point[0],'current location');return;}
+  if(state.facilityTimer===null){
+    state.facilityTimer=setTimeout(()=>{
+      state.facilityTimer=null;
+      if(state.watch!==null&&state.position?.coords.accuracy<=50){
+        const latest=[state.position.coords.longitude,state.position.coords.latitude];
+        if(!state.lastFacilityPosition||meters(state.lastFacilityPosition,latest)>=300)loadFacilities(latest[1],latest[0],'current location');
+      }
+    },60000-elapsed);
+  }
+}
 $('nearby').addEventListener('click',async()=>{
   $('nearby').disabled=true;status('Looking for nearby help…');
   try{
-    let lat,lng;if(state.watch!==null){const p=await gps();displayPosition(p);lat=p.coords.latitude;lng=p.coords.longitude;}else if(state.start){lat=state.start.lat;lng=state.start.lng;}else{const p=await gps();displayPosition(p);lat=p.coords.latitude;lng=p.coords.longitude;}
-    const result=await api(`/help?lat=${lat}&lng=${lng}`);clearHelp();$('help-section').hidden=false;
-    if(!result.places.length)$('help-list').append(node('p','No facilities returned here. This does not mean help is unavailable.'));
-    result.places.forEach(place=>{const box=node('div',undefined,'help-item'),button=node('button',`${place.name} · ${km(place.distance)}`);button.addEventListener('click',()=>map?.setView([place.lat,place.lng],17));box.append(button);$('help-list').append(box);if(map){const marker=L.circleMarker([place.lat,place.lng],{color:'#496ca2',radius:7}).bindPopup(node('span',place.name)).addTo(map);state.helpLayers.push(marker);}});
-    status('Nearby help loaded around your '+(state.watch!==null?'current location.':state.start?'starting point.':'current location.'));
+    let loaded;
+    if(state.watch!==null){
+      const position=state.position;
+      if(!position||position.coords.accuracy>50)throw new Error('Waiting for an accurate GPS location fix.');
+      loaded=await loadFacilities(position.coords.latitude,position.coords.longitude,'current location');
+    }else if(state.start)loaded=await loadFacilities(state.start.lat,state.start.lng,'starting point');
+    else{const position=await gps();displayPosition(position);loaded=await loadFacilities(position.coords.latitude,position.coords.longitude,'current location');}
+    if(loaded)status('Nearby facility listings updated.');
+    else status($('facility-status').textContent,true);
   }catch(error){status(error.message,true);}finally{$('nearby').disabled=false;}
 });
-function clearHelp(){state.helpLayers.forEach(layer=>map?.removeLayer(layer));state.helpLayers=[];$('help-list').replaceChildren();$('help-section').hidden=true;}
+function clearHelp(){state.facilityRequestId++;if(state.facilityTimer!==null){clearTimeout(state.facilityTimer);state.facilityTimer=null;}state.helpLayers.forEach(item=>map?.removeLayer(item.layer));state.helpLayers=[];$('help-list').replaceChildren();$('help-section').hidden=true;}
 $('clear-help').addEventListener('click',clearHelp);
 $('report-location').addEventListener('click',async()=>{try{const p=await gps();$('report-lat').value=p.coords.latitude.toFixed(6);$('report-lng').value=p.coords.longitude.toFixed(6);}catch(error){$('report-feedback').textContent=error.message;}});
 $('report-form').addEventListener('submit',async event=>{

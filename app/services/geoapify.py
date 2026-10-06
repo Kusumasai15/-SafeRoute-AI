@@ -1,6 +1,8 @@
 """Fixed-host provider adapter. Never expose request URLs or API keys in errors."""
 import json
 import math
+import threading
+import time
 import requests
 from flask import current_app
 
@@ -8,6 +10,17 @@ class ProviderError(Exception):
     def __init__(self, message, status=502):
         self.status = status
         super().__init__(message)
+
+PLACE_CATEGORIES = {
+    'service.police': 'Police station',
+    'healthcare.hospital': 'Hospital',
+    'healthcare.pharmacy': 'Pharmacy',
+}
+PLACE_CACHE_TTL = 300
+PLACE_CACHE_LIMIT = 256
+PLACE_QUERY_RADIUS = 5100
+_places_cache = {}
+_places_cache_lock = threading.Lock()
 
 def fetch(path, params):
     key = current_app.config['GEOAPIFY_API_KEY']
@@ -36,6 +49,100 @@ def distance(a, b):
     lon1, lat1, lon2, lat2 = map(math.radians, [*a, *b])
     h = math.sin((lat2-lat1)/2)**2 + math.cos(lat1)*math.cos(lat2)*math.sin((lon2-lon1)/2)**2
     return 6371000 * 2 * math.asin(min(1, math.sqrt(h)))
+
+def nearby_places(latitude, longitude, category=None):
+    """Return deduplicated Geoapify facilities no farther than five kilometres."""
+    categories = (category,) if category else tuple(PLACE_CATEGORIES)
+    cache_latitude, cache_longitude = round(latitude, 3), round(longitude, 3)
+    cache_key = (cache_latitude, cache_longitude, category)
+    now = time.monotonic()
+    with _places_cache_lock:
+        cached = _places_cache.get(cache_key)
+        if cached and cached[0] > now:
+            candidates = cached[1]
+        else:
+            _places_cache.pop(cache_key, None)
+            candidates = None
+
+    if candidates is None:
+        params = dict(
+            categories=','.join(categories),
+            # Pad the rounded cache cell; every returned place is rechecked at the exact center below.
+            filter=f'circle:{cache_longitude},{cache_latitude},{PLACE_QUERY_RADIUS}',
+            bias=f'proximity:{cache_longitude},{cache_latitude}',
+            limit=100,
+        )
+        result = fetch('v2/places', params)
+        candidates = []
+        seen = set()
+        features = result.get('features')
+        if not isinstance(features, list):
+            raise ProviderError('Unexpected Places response.')
+        for feature in features:
+            if not isinstance(feature, dict):
+                continue
+            properties = feature.get('properties')
+            geometry = feature.get('geometry')
+            if not isinstance(properties, dict) or not isinstance(geometry, dict):
+                continue
+            coordinates = geometry.get('coordinates')
+            provider_categories = properties.get('categories')
+            if (geometry.get('type') != 'Point'
+                    or not isinstance(coordinates, list) or len(coordinates) < 2
+                    or not isinstance(provider_categories, list)):
+                continue
+            try:
+                place_longitude, place_latitude = map(float, coordinates[:2])
+            except (TypeError, ValueError):
+                continue
+            if (not math.isfinite(place_longitude) or not math.isfinite(place_latitude)
+                    or not -180 <= place_longitude <= 180
+                    or not -90 <= place_latitude <= 90):
+                continue
+            place_category = next(
+                (item for item in categories if item in provider_categories),
+                None,
+            )
+            if place_category is None:
+                continue
+            name = properties.get('name') or properties.get('formatted')
+            name = name.strip() if isinstance(name, str) else ''
+            name = name or f"Unnamed {PLACE_CATEGORIES[place_category].lower()}"
+            provider_id = properties.get('place_id')
+            identity = (
+                ('provider', provider_id) if isinstance(provider_id, str) and provider_id
+                else ('location', place_category, round(place_longitude, 5),
+                      round(place_latitude, 5), name.casefold())
+            )
+            if identity in seen:
+                continue
+            seen.add(identity)
+            candidates.append(dict(
+                name=name,
+                lat=place_latitude,
+                lng=place_longitude,
+                category=place_category,
+                category_label=PLACE_CATEGORIES[place_category],
+            ))
+        with _places_cache_lock:
+            if len(_places_cache) >= PLACE_CACHE_LIMIT:
+                oldest = min(_places_cache, key=lambda key: _places_cache[key][0])
+                _places_cache.pop(oldest, None)
+            _places_cache[cache_key] = (now + PLACE_CACHE_TTL, candidates)
+
+    places = []
+    for candidate in candidates:
+        meters_away = distance(
+            [longitude, latitude],
+            [candidate['lng'], candidate['lat']],
+        )
+        if meters_away <= 5000:
+            places.append({
+                **candidate,
+                'distance': round(meters_away),
+                'distance_label': 'straight-line distance',
+            })
+    return sorted(places, key=lambda place: place['distance'])
 
 def points(geometry):
     if geometry['type'] == 'LineString':
@@ -107,8 +214,14 @@ def normalize(feature, preference):
         for step in leg.get('steps', []):
             index = max(0, min(len(part)-1, int(step.get('from_index', 0))))
             instruction = step.get('instruction', {})
-            text = instruction.get('text', '') if isinstance(instruction, dict) else str(instruction)
-            steps.append(dict(text=text or 'Continue along the route', point=part[index],
+            text = instruction.get('text', '') if isinstance(instruction, dict) else (
+                instruction if isinstance(instruction, str) else ''
+            )
+            if not isinstance(text, str) or not text.strip():
+                continue
+            maneuver_point = part[index]
+            steps.append(dict(text=text.strip(), point=maneuver_point,
+                              maneuver_point=maneuver_point,
                               index=offset+index, distance=step.get('distance', 0)))
         offset += len(part)
     return dict(geometry=geometry, distance=route_distance,

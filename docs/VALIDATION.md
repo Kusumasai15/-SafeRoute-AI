@@ -2,17 +2,17 @@
 
 ## Checks performed
 
-- Python backend workflow suite: 24 passing cases on disposable in-memory SQLite.
+- Python backend suite: 48 passing tests, including disposable in-memory SQLite workflows and mocked route/Places providers.
 - Admin bootstrap, login/logout, CSRF, review reasons/status restrictions and audit persistence.
 - Report submission, owner isolation/deletion, invalid coordinate rejection and escaped admin rendering.
-- Mocked autocomplete, nearby-help normalization, distinct route handling, equivalent routes with different vertex density, step coordinates and optional-route failure.
+- Mocked autocomplete and route/Places providers; facility category normalization, five-kilometre filtering, duplicate removal, empty/missing-name handling and caching; travel-time-only route choice; route normalization and optional-route failure.
 - Missing API-key error and security response headers.
 - JavaScript syntax check with `node --check app/static/app.js`.
-- Node client-logic checks with `node tests/client_logic.cjs` (no extra Node packages required).
-- Python source compilation and local HTTP startup smoke check.
-- ZIP integrity and exclusion of secrets/runtime database files.
+- Node client-logic checks with `node tests/client_logic.cjs` exercise mocked Leaflet and synthetic GPS positions for route selection, zero/missing metrics, maneuver progression, stationary jitter, arrow heading, map follow, off-route/accuracy/permission errors, GPS cleanup, facility toggles/throttling and fullscreen/mobile overlay structure. Simulated coordinates are not real-device GPS testing.
+- Python source syntax checks, local HTTP startup and desktop/mobile overlay-geometry inspection.
+- `python build.py` asset generation and app/deployment asset parity verification.
 
-Provider documentation was consulted for request parameters. No actual Geoapify API key was supplied, so live autocomplete/routing/places calls were not exercised. No real-browser visual test, physical-device GPS test, emergency phone call or message send was performed. Node mocks do not validate Leaflet rendering, browser APIs or CSS layout.
+Provider documentation was consulted for request parameters. No actual Geoapify API key was supplied, so live autocomplete/routing/places calls were not exercised. No physical-device GPS test, emergency phone call or message send was performed. Mocked Leaflet/GPS checks do not confirm real browser permission behavior or facility coverage.
 
 ## Manual checks after you add your key
 

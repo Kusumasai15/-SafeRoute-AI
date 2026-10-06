@@ -6,6 +6,7 @@ from app.services import geoapify
 
 @pytest.fixture
 def app():
+    geoapify._places_cache.clear()
     return create_app(dict(TESTING=True, SECRET_KEY='test-only-secret-'*4,
                            SQLALCHEMY_DATABASE_URI='sqlite:///:memory:', GEOAPIFY_API_KEY=''))
 
@@ -108,7 +109,19 @@ def test_distinct_routes_and_steps(client,monkeypatch):
     assert response.status_code==200
     assert len(response.json['routes'])==2
     assert response.json['routes'][0]['steps'][1]['point']==[78.41,17.41]
+    assert response.json['routes'][0]['steps'][1]['maneuver_point']==[78.41,17.41]
     assert response.json['routes'][0]['steps'][1]['text']=='Turn right'
+
+def test_missing_provider_instruction_is_not_fabricated():
+    route_feature=feature()
+    route_feature['properties']['legs'][0]['steps']=[
+        dict(from_index=0,to_index=1,instruction=dict(text='')),
+        dict(from_index=1,to_index=2,instruction=dict(text='Turn right')),
+    ]
+    route=geoapify.normalize(route_feature,'balanced')
+    assert len(route['steps'])==1
+    assert route['steps'][0]['text']=='Turn right'
+    assert route['steps'][0]['maneuver_point']==[78.41,17.41]
 
 def test_duplicate_routes_suppressed(app,monkeypatch):
     monkeypatch.setattr(geoapify,'fetch',lambda *a,**k:dict(features=[feature()]))
@@ -170,6 +183,8 @@ def test_nearby_help_normalization(client,monkeypatch):
     response=client.get('/api/help?lat=17.4&lng=78.4')
     assert response.status_code==200
     assert response.json['places'][0]['distance']>0
+    assert response.json['places'][0]['category']=='healthcare.hospital'
+    assert response.json['places'][0]['distance_label']=='straight-line distance'
     assert 'safety_score' not in response.json
 
 def test_security_headers(client):
@@ -183,7 +198,7 @@ def test_facility_category_filter(client, monkeypatch, category):
     def fetch(path, params):
         assert path == 'v2/places'
         assert params['categories'] == category
-        assert params['filter'] == 'circle:77.59,12.97,5000'
+        assert params['filter'] == 'circle:77.59,12.97,5100'
         return dict(features=[])
     monkeypatch.setattr(geoapify, 'fetch', fetch)
     response = client.get('/api/help', query_string=dict(lat=12.97, lng=77.59, category=category))
@@ -208,7 +223,7 @@ def check_hash(value):
 
 def test_route_recommendation_uses_time_then_distance(client, monkeypatch):
     from app import routes as route_module
-    monkeypatch.setattr(route_module, 'analyze_demo_route', lambda geometry: dict(demo_safety_score=None, demo_crime_rate=None))
+    monkeypatch.setattr(route_module, 'analyze_demo_route', lambda geometry: dict(demo_safety_score=None, demo_crime_index=None))
     candidates = [
         dict(duration=900, distance=1000, geometry=feature()['geometry']),
         dict(duration=600, distance=1500, geometry=feature()['geometry']),
@@ -218,7 +233,7 @@ def test_route_recommendation_uses_time_then_distance(client, monkeypatch):
     response = client.post('/api/routes', json=dict(start=[17.4, 78.4], end=[17.42, 78.42], mode='walk'), headers=csrf(client))
     assert response.status_code == 200
     assert [route['recommended'] for route in response.json['routes']] == [False, False, True]
-    assert 'Shortest estimated travel time' in response.json['routes'][2]['recommendation_reason']
+    assert 'Fastest estimated travel time' in response.json['routes'][2]['recommendation_reason']
 
 
 def test_demo_recommendation_compares_all_routes(client, monkeypatch):
@@ -228,8 +243,69 @@ def test_demo_recommendation_compares_all_routes(client, monkeypatch):
     from app import routes as route_module
     monkeypatch.setattr(route_module, 'analyze_demo_route', lambda geometry: dict(
         demo_safety_score=[20, 90, 50][geometry['index']],
-        demo_crime_rate=[80, 10, 50][geometry['index']]))
+        demo_crime_index=[80, 10, 50][geometry['index']]))
     response = client.post('/api/routes', json=dict(start=[17.4, 78.4], end=[17.42, 78.42], mode='walk'), headers=csrf(client))
     assert response.status_code == 200
-    assert [route['recommended'] for route in response.json['routes']] == [False, True, False]
-    assert response.json['routes'][1]['recommendation_basis'] == 'synthetic_demo'
+    assert [route['recommended'] for route in response.json['routes']] == [True, False, False]
+    assert all(route['recommendation_basis'] == 'travel_time' for route in response.json['routes'])
+    assert all('comparison_score' not in route for route in response.json['routes'])
+    assert response.json['routes'][0]['demo']['demo_safety_score'] == 20
+    assert response.json['routes'][0]['demo']['demo_crime_index'] == 80
+    assert 'demo_crime_rate' not in response.json['routes'][0]['demo']
+
+
+def test_places_enforce_five_kilometres_and_deduplicate(client, monkeypatch):
+    fetch_count = 0
+    def fetch(path, params):
+        nonlocal fetch_count
+        fetch_count += 1
+        assert params['filter'] == 'circle:78.4,17.4,5100'
+        return dict(features=[
+            dict(properties=dict(place_id='inside', categories=['healthcare.hospital']),
+                 geometry=dict(type='Point', coordinates=[78.4, 17.44])),
+            dict(properties=dict(place_id='inside', categories=['healthcare.hospital']),
+                 geometry=dict(type='Point', coordinates=[78.4, 17.44])),
+            dict(properties=dict(place_id='outside', categories=['healthcare.hospital']),
+                 geometry=dict(type='Point', coordinates=[78.4, 17.46])),
+            dict(properties=dict(categories=['healthcare.hospital']),
+                 geometry=dict(type='Point', coordinates=[78.401, 17.401])),
+        ])
+    monkeypatch.setattr(geoapify, 'fetch', fetch)
+    response = client.get('/api/help?lat=17.4&lng=78.4')
+    assert response.status_code == 200
+    assert [place['name'] for place in response.json['places']].count('Unnamed hospital') == 2
+    assert all(place['distance'] <= 5000 for place in response.json['places'])
+    assert len(response.json['places']) == 2
+    client.get('/api/help?lat=17.4&lng=78.4')
+    assert fetch_count == 1
+
+
+def test_places_provider_error_is_reported(client, monkeypatch):
+    monkeypatch.setattr(geoapify, 'fetch', lambda *args, **kwargs: (_ for _ in ()).throw(geoapify.ProviderError('Places unavailable')))
+    response = client.get('/api/help?lat=17.4&lng=78.4')
+    assert response.status_code == 502
+    assert response.json['error'] == 'Places unavailable'
+
+def test_places_cache_reuses_nearby_cell_but_recalculates_distance(client, monkeypatch):
+    calls=0
+    def fetch(path, params):
+        nonlocal calls
+        calls+=1
+        return dict(features=[dict(
+            properties=dict(place_id='hospital-1', categories=['healthcare.hospital']),
+            geometry=dict(type='Point', coordinates=[78.4,17.4]),
+        )])
+    monkeypatch.setattr(geoapify,'fetch',fetch)
+    first=client.get('/api/help?lat=17.4001&lng=78.4001').json['places'][0]
+    second=client.get('/api/help?lat=17.4002&lng=78.4002').json['places'][0]
+    assert calls==1
+    assert second['distance']>first['distance']
+
+
+def test_home_exposes_navigation_and_facility_controls(client):
+    response = client.get('/')
+    assert b'id="turn-icon"' in response.data
+    assert b'id="follow"' in response.data
+    assert b'id="recenter"' in response.data
+    assert b'id="facility-toggles"' in response.data
+    assert b'Synthetic demo only' in response.data

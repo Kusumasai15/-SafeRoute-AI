@@ -83,40 +83,18 @@ def routes():
                 "label": "Synthetic demo â€” not verified safety information",
                 "status": "DEMO_DATA_UNAVAILABLE",
                 "message": str(error),
-                "incident_count": None,
                 "demo_safety_score": None,
-                "demo_crime_rate": None,
+                "demo_crime_index": None,
                 "safety_score": None,
                 "recommendation": None,
             }
 
     candidates = result["routes"]
-    complete = all(
-        route["demo"].get("demo_safety_score") is not None
-        and route["demo"].get("demo_crime_rate") is not None
-        for route in candidates
-    )
-    if complete:
-        fastest = min(route["duration"] for route in candidates)
-        shortest = min(route["distance"] for route in candidates)
-        for route in candidates:
-            demo = route["demo"]
-            route["comparison_score"] = (
-                0.6 * demo["demo_safety_score"]
-                + 0.2 * (100 - demo["demo_crime_rate"])
-                + 10 * (fastest / route["duration"] if route["duration"] else 1)
-                + 10 * shortest / route["distance"]
-            )
-        recommended = max(candidates, key=lambda route: (
-            route["comparison_score"], -route["duration"], -route["distance"]
-        ))
-        reason = "Demo comparison: 60% safety score, 20% lower crime index, 10% travel time, 10% distance. Uses fictional data; real-world safety is unverified."
-    else:
-        recommended = min(candidates, key=lambda route: (route["duration"], route["distance"]))
-        reason = "Shortest estimated travel time; distance breaks ties. Some routes lack demo safety or crime samples, so safety cannot be compared."
+    recommended = min(candidates, key=lambda route: (route["duration"], route["distance"]))
+    reason = "Fastest estimated travel time; distance breaks ties. Synthetic demo metrics do not affect route selection."
     for candidate in candidates:
         candidate["recommended"] = candidate is recommended
-        candidate["recommendation_basis"] = "synthetic_demo" if complete else "travel_time"
+        candidate["recommendation_basis"] = "travel_time"
         if candidate is recommended:
             candidate["recommendation_reason"] = reason
 
@@ -129,17 +107,7 @@ def nearby():
     category = request.args.get('category')
     if category and category not in supported:
         abort(400, 'Choose a supported facility category.')
-    # Geoapify Places uses OSM-based listings. No operational-status guarantee.
-    result = geoapify.fetch('v2/places', dict(categories=category or ','.join(supported),
-        filter=f'circle:{lng},{lat},5000', bias=f'proximity:{lng},{lat}', limit=20))
-    places = []
-    for feature in result.get('features', []):
-        props = feature['properties']
-        plng, plat = feature['geometry']['coordinates'][:2]
-        places.append(dict(name=props.get('name') or props.get('formatted', 'Facility'),
-            lat=plat, lng=plng, categories=props.get('categories', []),
-            distance=round(geoapify.distance([lng, lat], [plng, plat]))))
-    return jsonify(places=sorted(places, key=lambda p: p['distance']))
+    return jsonify(places=geoapify.nearby_places(lat, lng, category))
 
 @api.route('/reports', methods=['GET', 'POST'])
 def reports():

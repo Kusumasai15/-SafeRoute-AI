@@ -97,7 +97,6 @@ def analyze_demo_route(geometry):
     if not segments:
         raise ValueError("Route has no usable segments")
 
-    incidents = load_demo_records("incidents.csv", "incident_id")
     safety_records = load_demo_records("safety.csv", "safety_id")
     crime_records = load_demo_records("crime.csv", "crime_id")
 
@@ -118,13 +117,9 @@ def analyze_demo_route(geometry):
         )
         return record["route_distance_meters"] <= record["radius_meters"]
 
-    nearby_incidents = [
-        record for record in incidents if is_near_route(record)
-    ]
-
     nearby_safety = [record for record in safety_records if is_near_route(record)]
     nearby_crime = [record for record in crime_records if is_near_route(record)]
-    has_matches = bool(nearby_incidents or nearby_safety or nearby_crime)
+    has_matches = bool(nearby_safety or nearby_crime)
 
     # Nearby samples carry more weight; missing data stays unknown.
     def average(records, metric):
@@ -134,7 +129,7 @@ def analyze_demo_route(geometry):
         return round(sum(record[metric] * weight for record, weight in zip(records, weights)) / sum(weights), 1)
 
     demo_safety_score = average(nearby_safety, "safety_score")
-    demo_crime_rate = average(nearby_crime, "crime_rate")
+    demo_crime_index = average(nearby_crime, "crime_rate")
 
     return {
         "is_demo": True,
@@ -142,13 +137,12 @@ def analyze_demo_route(geometry):
         "safety_sample_ids": [record["safety_id"] for record in nearby_safety],
         "crime_sample_ids": [record["crime_id"] for record in nearby_crime],
         "demo_safety_score": demo_safety_score,
-        "demo_crime_rate": demo_crime_rate,
+        "demo_crime_index": demo_crime_index,
         "label": "Synthetic demo â€” not verified safety information",
         "radius_meters": max(
             (record["radius_meters"] for record in nearby_safety + nearby_crime),
             default=250,
         ),
-        "incident_count": len(nearby_incidents),
         "status": (
             "DEMO_RECORDS_FOUND"
             if has_matches
