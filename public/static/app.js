@@ -68,7 +68,175 @@ $('plan-form').addEventListener('submit',async event=>{
     status(result.warnings.join(' ')||(result.routes.length===1?'One distinct route returned.':'Choose a route below.'));fitRoute();
   }catch(error){if(mine===state.requestId)status(error.message,true);}finally{$('find').disabled=false;}
 });
+function renderRoutes() {
+  $('route-cards').replaceChildren();
+  state.layers.forEach(layer => map?.removeLayer(layer));
+  state.endpoints.forEach(layer => map?.removeLayer(layer));
+  state.layers = [];
+  state.endpoints = [];
 
+  if (!state.routes.length) return;
+
+  state.routes.forEach((route, index) => {
+    const selected = index === state.selected;
+    const card = node(
+      'button',
+      undefined,
+      'route-card' + (selected ? ' selected' : '')
+    );
+
+    card.type = 'button';
+    card.setAttribute('aria-pressed', String(selected));
+
+    const header = node('div', undefined, 'route-header');
+    const title = node('div', undefined, 'route-title');
+
+    title.append(
+      node('strong', `Route ${index + 1}`),
+      node(
+        'small',
+        route.preference === 'short'
+          ? 'Distance-focused'
+          : 'Balanced route'
+      )
+    );
+
+    const travel = node('div', undefined, 'route-travel');
+    travel.append(
+      node('strong', minutes(route.duration)),
+      node('small', km(route.distance))
+    );
+
+    header.append(title, travel);
+    card.append(
+      header,
+      node('span', 'DEMO COMPARISON', 'demo-badge')
+    );
+
+    const demo = route.demo;
+    const available =
+      demo && demo.status !== 'DEMO_DATA_UNAVAILABLE';
+
+    function score(value) {
+      return available &&
+        typeof value === 'number' &&
+        Number.isFinite(value) &&
+        value >= 0 &&
+        value <= 100
+          ? `${Math.round(value)}/100`
+          : '—';
+    }
+
+    function statistic(value, label) {
+      const box = node('div', undefined, 'demo-stat');
+      box.append(
+        node('strong', value),
+        node('small', label)
+      );
+      return box;
+    }
+
+    const statistics = node(
+      'div',
+      undefined,
+      'demo-statistics'
+    );
+
+    statistics.append(
+      statistic(
+        available && Number.isInteger(demo.incident_count)
+          ? String(demo.incident_count)
+          : '—',
+        'Sample incidents'
+      ),
+      statistic(
+        score(demo?.demo_safety_score),
+        'Demo safety score'
+      ),
+      statistic(
+        score(demo?.demo_crime_index),
+        'Demo crime index'
+      )
+    );
+
+    card.append(statistics);
+
+    const note = !available
+      ? 'Demo data unavailable.'
+      : demo.status === 'NO_DEMO_RECORDS_NEAR_ROUTE'
+        ? 'No demo records within 250 m. Safety is unknown.'
+        : 'Synthetic demo only. These indices are not real safety or crime rates.';
+
+    card.append(node('p', note, 'demo-card-note'));
+
+    function selectRoute() {
+      stopNavigation();
+      state.selected = index;
+      renderRoutes();
+      fitRoute();
+    }
+
+    card.addEventListener('click', selectRoute);
+    $('route-cards').append(card);
+
+    if (map) {
+      const layer = L.geoJSON(
+        {
+          type: 'Feature',
+          geometry: route.geometry,
+          properties: {}
+        },
+        {
+          style: {
+            color: selected ? '#166449' : '#8096b2',
+            weight: selected ? 7 : 4,
+            opacity: selected ? 1 : 0.6
+          }
+        }
+      ).addTo(map);
+
+      layer.on('click', selectRoute);
+      state.layers.push(layer);
+    }
+  });
+
+  state.layers[state.selected]?.bringToFront();
+
+  const chosen = state.routes[state.selected];
+  $('map-hint').hidden = false;
+  $('map-hint').textContent =
+    `${km(chosen.distance)} · ${minutes(chosen.duration)} estimated`;
+
+  if (map) {
+    for (const [key, color] of [
+      ['start', '#166449'],
+      ['end', '#a92e42']
+    ]) {
+      const place = state[key];
+      if (!place) continue;
+
+      const marker = L.circleMarker(
+        [place.lat, place.lng],
+        {
+          radius: 9,
+          color: 'white',
+          weight: 3,
+          fillColor: color,
+          fillOpacity: 1
+        }
+      )
+        .bindPopup(
+          node(
+            'span',
+            `${key === 'start' ? 'Start' : 'Destination'}: ${place.label}`
+          )
+        )
+        .addTo(map);
+
+      state.endpoints.push(marker);
+    }
+  }
+}
 function fitRoute(){if(map&&state.layers[state.selected])map.fitBounds(state.layers[state.selected].getBounds(),{padding:[35,35]});}
 $('fit').addEventListener('click',()=>{if(state.routes.length)fitRoute();else if(state.position)map?.setView([state.position.coords.latitude,state.position.coords.longitude],16);});
 function expand(force){const shell=$('map-shell');shell.classList.toggle('expanded',force??!shell.classList.contains('expanded'));$('expand').setAttribute('aria-label',shell.classList.contains('expanded')?'Close expanded map':'Expand map');setTimeout(()=>map?.invalidateSize(),50);}
