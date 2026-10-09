@@ -8,6 +8,7 @@ from . import owner_key
 from .models import db, Admin, Audit, Report
 from .services import geoapify
 from .services.demo_service import analyze_demo_route
+from .services.lighting_ml import recommend_routes, score_route_lighting
 
 api = Blueprint('api', __name__, url_prefix='/api')
 main = Blueprint('main', __name__)
@@ -71,7 +72,6 @@ def routes():
     if geoapify.distance(start[::-1], end[::-1]) < 20:
         abort(400, 'Choose a destination at least 20 metres from the start.')
     result = geoapify.routes(start, end, data["mode"])
-
     for candidate in result["routes"]:
         try:
             candidate["demo"] = analyze_demo_route(
@@ -88,15 +88,9 @@ def routes():
                 "safety_score": None,
                 "recommendation": None,
             }
+        candidate["lighting"] = score_route_lighting(candidate)
 
-    candidates = result["routes"]
-    recommended = min(candidates, key=lambda route: (route["duration"], route["distance"]))
-    reason = "Fastest estimated travel time; distance breaks ties. Synthetic demo metrics do not affect route selection."
-    for candidate in candidates:
-        candidate["recommended"] = candidate is recommended
-        candidate["recommendation_basis"] = "travel_time"
-        if candidate is recommended:
-            candidate["recommendation_reason"] = reason
+    recommend_routes(result["routes"])
 
     return jsonify(result)
 

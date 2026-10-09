@@ -1,0 +1,181 @@
+record_id,latitude,longitude,city,state,road_type,time_period,streetlight_density,ambient_light_index,tree_canopy_percent,road_width_m,built_density,lighting_condition,lighting_score,observation_type
+LIGHT-0001,17.684461,83.211694,Visakhapatnam,Andhra Pradesh,highway,dusk,10.5,61.7,15.7,19.2,40.6,good,83.2,SYNTHETIC_DEMO
+LIGHT-0002,17.692321,83.212528,Visakhapatnam,Andhra Pradesh,market,night,17.0,93.1,51.5,12.8,33.4,good,80.0,SYNTHETIC_DEMO
+LIGHT-0003,17.681407,83.215218,Visakhapatnam,Andhra Pradesh,arterial,dusk,8.6,69.1,73.5,19.3,9.2,moderate,62.7,SYNTHETIC_DEMO
+LIGHT-0004,17.678929,83.226347,Visakhapatnam,Andhra Pradesh,arterial,night,18.1,39.4,62.8,5.3,63.1,moderate,63.7,SYNTHETIC_DEMO
+LIGHT-0005,17.687757,83.221389,Visakhapatnam,Andhra Pradesh,market,dusk,9.8,53.5,22.4,12.7,88.1,good,73.9,SYNTHETIC_DEMO
+LIGHT-0006,27.081596,93.610993,Itanagar,Arunachal Pradesh,arterial,day,22.0,75.6,1.0,4.8,7.6,good,100,SYNTHETIC_DEMO
+LIGHT-0007,27.084404,93.605514,Itanagar,Arunachal Pradesh,rural,day,19.0,54.8,41.9,6.8,94.5,good,92.2,SYNTHETIC_DEMO
+LIGHT-0008,27.089613,93.611585,Itanagar,Arunachal Pradesh,collector,night,12.6,53.4,73.6,4.0,7.7,moderate,58.1,SYNTHETIC_DEMO
+LIGHT-0009,27.078326,93.612771,Itanagar,Arunachal Pradesh,market,day,14.6,92.0,56.0,13.4,71.4,good,95.7,SYNTHETIC_DEMO
+LIGHT-0010,27.083181,93.610512,Itanagar,Arunachal Pradesh,collector,night,20.4,34.1,45.4,4.8,42.4,good,74.4,SYNTHETIC_DEMO
+LIGHT-0011,26.150343,91.726376,Guwahati,Assam,collector,night,6.6,50.4,9.4,15.9,70.8,moderate,63.8,SYNTHETIC_DEMO
+LIGHT-0012,26.151058,91.745634,Guwahati,Assam,collector,night,1.2,7.7,2.9,8.0,73.9,poor,34.8,SYNTHETIC_DEMO
+LIGHT-0013,26.151251,91.741964,Guwahati,Assam,collector,dusk,7.9,96.5,62.8,4.6,37.4,good,67.7,SYNTHETIC_DEMO
+LIGHT-0014,26.14641,91.737968,Guwahati,Assam,residential,dusk,7.5,87.3,53.6,6.1,96.3,good,74.8,SYNTHETIC_DEMO
+LIGHT-0015,26.141498,91.73611,Guwahati,Assam,residential,dusk,19.2,29.9,6.3,18.3,99.8,good,100,SYNTHETIC_DEMO
+LIGHT-0016,25.586963,85.137207,Patna,Bihar,collector,night,11.6,8.6,54.5,6.2,75.3,moderate,43.0,SYNTHETIC_DEMO
+LIGHT-0017,25.587144,85.128787,Patna,Bihar,market,day,2.1,51.3,60.5,12.3,26.3,moderate,61.7,SYNTHETIC_DEMO
+LIGHT-0018,25.593902,85.143896,Patna,Bihar,highway,dusk,23.3,1.6,22.7,3.4,61.9,good,82.2,SYNTHETIC_DEMO
+LIGHT-0019,25.592434,85.131735,Patna,Bihar,residential,night,10.6,44.9,23.2,13.8,81.2,good,74.5,SYNTHETIC_DEMO
+LIGHT-0020,25.593728,85.13545,Patna,Bihar,highway,night,4.0,25.6,6.2,13.9,78.7,moderate,46.5,SYNTHETIC_DEMO
+LIGHT-0021,21.246001,81.633812,Raipur,Chhattisgarh,collector,night,15.4,78.5,62.5,9.8,58.4,good,70.4,SYNTHETIC_DEMO
+LIGHT-0022,21.254527,81.622876,Raipur,Chhattisgarh,collector,night,4.9,2.2,49.7,14.0,2.8,poor,34.8,SYNTHETIC_DEMO
+LIGHT-0023,21.246131,81.633613,Raipur,Chhattisgarh,market,night,2.8,60.4,70.1,14.1,44.2,poor,31.7,SYNTHETIC_DEMO
+LIGHT-0024,21.246947,81.624988,Raipur,Chhattisgarh,residential,night,20.9,79.1,3.4,7.8,31.2,good,94.6,SYNTHETIC_DEMO
+LIGHT-0025,21.252097,81.628008,Raipur,Chhattisgarh,rural,dusk,1.5,8.4,3.5,15.5,19.9,poor,29.6,SYNTHETIC_DEMO
+LIGHT-0026,15.48975,73.832367,Panaji,Goa,rural,night,1.4,74.4,7.7,14.1,57.5,moderate,45.5,SYNTHETIC_DEMO
+LIGHT-0027,15.486893,73.821249,Panaji,Goa,residential,dusk,15.9,85.9,1.3,6.2,15.2,good,93.8,SYNTHETIC_DEMO
+LIGHT-0028,15.494897,73.820222,Panaji,Goa,rural,night,5.6,66.7,1.8,8.4,93.2,good,69.3,SYNTHETIC_DEMO
+LIGHT-0029,15.494904,73.832821,Panaji,Goa,highway,dusk,21.0,81.5,51.7,8.2,40.8,good,93.9,SYNTHETIC_DEMO
+LIGHT-0030,15.492109,73.828507,Panaji,Goa,highway,night,12.3,27.2,47.7,19.2,0.7,moderate,56.3,SYNTHETIC_DEMO
+LIGHT-0031,23.016803,72.569633,Ahmedabad,Gujarat,market,dusk,14.1,2.8,25.2,15.7,92.5,good,67.4,SYNTHETIC_DEMO
+LIGHT-0032,23.02198,72.567138,Ahmedabad,Gujarat,collector,night,9.5,53.3,46.4,9.9,45.7,moderate,55.7,SYNTHETIC_DEMO
+LIGHT-0033,23.01886,72.571611,Ahmedabad,Gujarat,rural,night,11.5,65.1,37.6,8.1,82.7,moderate,64.3,SYNTHETIC_DEMO
+LIGHT-0034,23.016113,72.575411,Ahmedabad,Gujarat,rural,day,9.1,9.3,57.3,3.2,5.5,moderate,46.7,SYNTHETIC_DEMO
+LIGHT-0035,23.025971,72.576011,Ahmedabad,Gujarat,rural,dusk,16.4,47.0,6.3,15.8,44.8,good,86.3,SYNTHETIC_DEMO
+LIGHT-0036,28.466088,77.023622,Gurugram,Haryana,residential,night,4.7,11.3,12.2,11.4,13.1,moderate,37.0,SYNTHETIC_DEMO
+LIGHT-0037,28.461634,77.026434,Gurugram,Haryana,rural,dusk,8.4,79.3,45.0,14.4,35.0,moderate,63.5,SYNTHETIC_DEMO
+LIGHT-0038,28.463735,77.022619,Gurugram,Haryana,arterial,night,15.2,66.3,30.5,6.7,86.4,good,73.9,SYNTHETIC_DEMO
+LIGHT-0039,28.458478,77.035954,Gurugram,Haryana,collector,night,19.4,19.4,61.8,9.3,84.4,good,65.3,SYNTHETIC_DEMO
+LIGHT-0040,28.461198,77.02726,Gurugram,Haryana,market,day,23.0,75.7,0.1,14.6,1.8,good,100,SYNTHETIC_DEMO
+LIGHT-0041,31.11059,77.181542,Shimla,Himachal Pradesh,highway,dusk,9.5,12.1,51.1,4.3,99.6,moderate,50.4,SYNTHETIC_DEMO
+LIGHT-0042,31.099585,77.16371,Shimla,Himachal Pradesh,highway,dusk,19.7,3.2,61.0,15.2,34.6,good,75.1,SYNTHETIC_DEMO
+LIGHT-0043,31.107802,77.178354,Shimla,Himachal Pradesh,residential,dusk,8.5,8.7,6.6,4.5,3.3,moderate,41.7,SYNTHETIC_DEMO
+LIGHT-0044,31.099043,77.175228,Shimla,Himachal Pradesh,highway,night,1.9,38.1,35.8,9.0,24.1,poor,30.7,SYNTHETIC_DEMO
+LIGHT-0045,31.110313,77.181265,Shimla,Himachal Pradesh,highway,day,14.3,40.3,74.0,14.6,9.1,good,73.9,SYNTHETIC_DEMO
+LIGHT-0046,23.34628,85.303952,Ranchi,Jharkhand,rural,dusk,15.7,68.2,48.2,17.1,35.2,good,73.8,SYNTHETIC_DEMO
+LIGHT-0047,23.340558,85.317805,Ranchi,Jharkhand,highway,day,10.8,90.4,49.8,10.8,48.7,good,98.9,SYNTHETIC_DEMO
+LIGHT-0048,23.343176,85.313183,Ranchi,Jharkhand,arterial,night,17.3,55.3,5.5,17.8,19.0,good,79.4,SYNTHETIC_DEMO
+LIGHT-0049,23.34773,85.310773,Ranchi,Jharkhand,residential,night,1.1,96.6,70.3,17.8,78.2,moderate,46.4,SYNTHETIC_DEMO
+LIGHT-0050,23.347275,85.316609,Ranchi,Jharkhand,residential,dusk,1.7,34.7,57.2,18.8,61.8,moderate,48.0,SYNTHETIC_DEMO
+LIGHT-0051,12.96423,77.59039,Bengaluru,Karnataka,highway,dusk,22.2,75.8,69.6,15.9,36.1,good,100,SYNTHETIC_DEMO
+LIGHT-0052,12.963805,77.592993,Bengaluru,Karnataka,market,dusk,19.3,49.2,16.1,18.0,56.8,good,92.9,SYNTHETIC_DEMO
+LIGHT-0053,12.969381,77.596705,Bengaluru,Karnataka,rural,dusk,6.4,37.2,20.3,14.8,9.7,moderate,61.8,SYNTHETIC_DEMO
+LIGHT-0054,12.973969,77.60109,Bengaluru,Karnataka,rural,dusk,20.0,99.1,55.2,18.5,20.2,good,89.6,SYNTHETIC_DEMO
+LIGHT-0055,12.973995,77.601559,Bengaluru,Karnataka,market,day,23.3,39.4,74.8,7.4,37.3,good,92.0,SYNTHETIC_DEMO
+LIGHT-0056,9.933255,76.268374,Kochi,Kerala,highway,dusk,3.4,79.1,25.5,12.6,84.6,good,71.9,SYNTHETIC_DEMO
+LIGHT-0057,9.934003,76.264001,Kochi,Kerala,market,dusk,1.3,14.5,13.6,4.7,12.1,moderate,38.4,SYNTHETIC_DEMO
+LIGHT-0058,9.932082,76.263871,Kochi,Kerala,residential,night,10.4,87.6,2.1,15.4,38.0,good,80.5,SYNTHETIC_DEMO
+LIGHT-0059,9.933872,76.275258,Kochi,Kerala,market,dusk,23.5,81.0,31.9,15.9,80.9,good,100,SYNTHETIC_DEMO
+LIGHT-0060,9.929579,76.266675,Kochi,Kerala,highway,dusk,13.6,87.2,50.6,3.5,86.7,good,82.8,SYNTHETIC_DEMO
+LIGHT-0061,23.265111,77.414351,Bhopal,Madhya Pradesh,market,night,10.7,54.6,48.0,7.6,61.7,moderate,59.5,SYNTHETIC_DEMO
+LIGHT-0062,23.262066,77.409962,Bhopal,Madhya Pradesh,rural,day,2.8,72.7,68.4,17.6,19.2,moderate,52.8,SYNTHETIC_DEMO
+LIGHT-0063,23.264059,77.40607,Bhopal,Madhya Pradesh,market,dusk,19.2,98.9,16.2,3.6,57.8,good,100,SYNTHETIC_DEMO
+LIGHT-0064,23.254322,77.408757,Bhopal,Madhya Pradesh,rural,day,19.8,92.8,35.2,8.8,77.9,good,100,SYNTHETIC_DEMO
+LIGHT-0065,23.255489,77.407463,Bhopal,Madhya Pradesh,market,day,8.2,68.2,69.0,8.5,50.0,good,78.4,SYNTHETIC_DEMO
+LIGHT-0066,19.076887,72.875878,Mumbai,Maharashtra,market,day,17.7,91.1,11.6,8.9,77.1,good,100,SYNTHETIC_DEMO
+LIGHT-0067,19.070773,72.873644,Mumbai,Maharashtra,market,day,10.2,23.8,23.6,14.5,10.8,good,68.8,SYNTHETIC_DEMO
+LIGHT-0068,19.074054,72.878307,Mumbai,Maharashtra,highway,day,9.7,74.1,49.5,15.3,25.7,good,75.1,SYNTHETIC_DEMO
+LIGHT-0069,19.081632,72.887477,Mumbai,Maharashtra,arterial,night,19.3,24.8,71.8,4.7,51.7,moderate,61.1,SYNTHETIC_DEMO
+LIGHT-0070,19.081505,72.874763,Mumbai,Maharashtra,market,night,3.8,93.4,71.5,8.0,85.3,moderate,56.4,SYNTHETIC_DEMO
+LIGHT-0071,24.812302,93.928579,Imphal,Manipur,rural,night,14.0,83.3,37.8,4.5,71.8,good,76.0,SYNTHETIC_DEMO
+LIGHT-0072,24.815225,93.931121,Imphal,Manipur,rural,dusk,19.4,78.7,31.7,4.9,46.4,good,88.4,SYNTHETIC_DEMO
+LIGHT-0073,24.813817,93.942415,Imphal,Manipur,market,day,6.2,20.0,17.9,5.2,1.3,moderate,55.4,SYNTHETIC_DEMO
+LIGHT-0074,24.812578,93.934098,Imphal,Manipur,residential,day,6.9,51.1,10.5,14.2,60.2,good,90.3,SYNTHETIC_DEMO
+LIGHT-0075,24.821451,93.9295,Imphal,Manipur,highway,day,18.6,1.0,58.2,11.3,66.0,good,84.9,SYNTHETIC_DEMO
+LIGHT-0076,25.577885,91.888019,Shillong,Meghalaya,arterial,night,15.7,2.9,45.8,10.9,72.1,moderate,54.8,SYNTHETIC_DEMO
+LIGHT-0077,25.580735,91.898549,Shillong,Meghalaya,collector,night,20.4,52.0,35.7,7.9,1.1,good,79.7,SYNTHETIC_DEMO
+LIGHT-0078,25.574869,91.900102,Shillong,Meghalaya,arterial,day,22.3,90.7,56.6,13.3,82.8,good,100,SYNTHETIC_DEMO
+LIGHT-0079,25.582796,91.902602,Shillong,Meghalaya,market,day,5.4,96.8,41.2,17.0,27.2,good,83.7,SYNTHETIC_DEMO
+LIGHT-0080,25.5736,91.890516,Shillong,Meghalaya,rural,dusk,1.6,100.0,43.8,14.7,23.8,moderate,52.8,SYNTHETIC_DEMO
+LIGHT-0081,23.734316,92.718757,Aizawl,Mizoram,collector,day,6.4,79.2,62.9,19.8,27.8,good,84.4,SYNTHETIC_DEMO
+LIGHT-0082,23.732691,92.713434,Aizawl,Mizoram,arterial,day,22.1,40.4,27.6,17.9,9.4,good,100,SYNTHETIC_DEMO
+LIGHT-0083,23.7342,92.708499,Aizawl,Mizoram,arterial,day,18.1,36.8,34.6,11.9,56.8,good,93.7,SYNTHETIC_DEMO
+LIGHT-0084,23.724397,92.722455,Aizawl,Mizoram,market,dusk,22.2,73.9,53.3,10.2,20.2,good,93.4,SYNTHETIC_DEMO
+LIGHT-0085,23.723328,92.723801,Aizawl,Mizoram,rural,day,11.2,40.7,73.0,8.5,84.3,good,81.4,SYNTHETIC_DEMO
+LIGHT-0086,25.670385,94.110344,Kohima,Nagaland,rural,dusk,5.3,95.1,7.5,19.7,9.1,good,68.3,SYNTHETIC_DEMO
+LIGHT-0087,25.676339,94.117124,Kohima,Nagaland,rural,day,10.4,16.9,40.9,13.5,93.2,good,75.9,SYNTHETIC_DEMO
+LIGHT-0088,25.682586,94.112488,Kohima,Nagaland,highway,dusk,18.6,87.0,22.5,9.4,67.5,good,100,SYNTHETIC_DEMO
+LIGHT-0089,25.679111,94.101548,Kohima,Nagaland,collector,dusk,8.0,21.3,26.9,16.7,95.3,moderate,60.6,SYNTHETIC_DEMO
+LIGHT-0090,25.676549,94.111814,Kohima,Nagaland,collector,dusk,15.4,58.0,64.2,5.7,73.2,good,81.6,SYNTHETIC_DEMO
+LIGHT-0091,20.291689,85.815786,Bhubaneswar,Odisha,rural,dusk,7.5,49.1,42.5,18.7,16.5,moderate,49.3,SYNTHETIC_DEMO
+LIGHT-0092,20.29712,85.819625,Bhubaneswar,Odisha,market,day,7.3,38.2,64.4,12.5,90.0,good,68.1,SYNTHETIC_DEMO
+LIGHT-0093,20.288557,85.822088,Bhubaneswar,Odisha,arterial,night,20.0,1.6,49.7,4.1,8.6,moderate,51.9,SYNTHETIC_DEMO
+LIGHT-0094,20.29352,85.822201,Bhubaneswar,Odisha,rural,dusk,18.6,97.4,31.9,11.3,17.4,good,80.3,SYNTHETIC_DEMO
+LIGHT-0095,20.29913,85.8204,Bhubaneswar,Odisha,market,night,19.0,92.0,39.8,19.6,75.7,good,91.5,SYNTHETIC_DEMO
+LIGHT-0096,30.90272,75.848971,Ludhiana,Punjab,market,dusk,20.6,42.7,59.0,16.7,83.8,good,93.3,SYNTHETIC_DEMO
+LIGHT-0097,30.90216,75.849131,Ludhiana,Punjab,market,dusk,20.7,31.2,74.9,3.3,5.9,good,66.4,SYNTHETIC_DEMO
+LIGHT-0098,30.906738,75.848315,Ludhiana,Punjab,market,day,9.4,67.9,71.3,9.4,60.5,good,82.1,SYNTHETIC_DEMO
+LIGHT-0099,30.893159,75.862183,Ludhiana,Punjab,highway,dusk,22.1,14.3,69.4,11.4,47.9,good,81.4,SYNTHETIC_DEMO
+LIGHT-0100,30.902986,75.866411,Ludhiana,Punjab,residential,day,1.8,23.6,64.9,18.0,5.7,moderate,50.9,SYNTHETIC_DEMO
+LIGHT-0101,26.905548,75.787839,Jaipur,Rajasthan,residential,day,21.3,66.0,52.4,19.6,62.8,good,100,SYNTHETIC_DEMO
+LIGHT-0102,26.90922,75.791304,Jaipur,Rajasthan,highway,day,7.1,89.5,59.3,13.8,74.2,good,96.1,SYNTHETIC_DEMO
+LIGHT-0103,26.904994,75.789087,Jaipur,Rajasthan,residential,dusk,23.9,53.9,60.4,15.7,91.5,good,100,SYNTHETIC_DEMO
+LIGHT-0104,26.912888,75.789738,Jaipur,Rajasthan,collector,night,2.7,88.6,54.8,10.1,17.0,moderate,48.6,SYNTHETIC_DEMO
+LIGHT-0105,26.910445,75.781695,Jaipur,Rajasthan,highway,day,20.6,39.1,46.4,17.1,64.6,good,100,SYNTHETIC_DEMO
+LIGHT-0106,27.338398,88.606014,Gangtok,Sikkim,arterial,day,23.2,18.3,14.0,10.5,8.4,good,100,SYNTHETIC_DEMO
+LIGHT-0107,27.334977,88.599843,Gangtok,Sikkim,rural,night,11.4,5.8,55.3,3.5,36.3,moderate,46.8,SYNTHETIC_DEMO
+LIGHT-0108,27.337814,88.606274,Gangtok,Sikkim,residential,night,2.1,49.2,51.6,17.2,96.5,moderate,49.7,SYNTHETIC_DEMO
+LIGHT-0109,27.346758,88.596577,Gangtok,Sikkim,market,dusk,2.5,27.6,26.1,5.5,34.1,moderate,41.4,SYNTHETIC_DEMO
+LIGHT-0110,27.346356,88.60477,Gangtok,Sikkim,collector,day,20.1,17.1,71.7,8.5,17.0,good,90.4,SYNTHETIC_DEMO
+LIGHT-0111,13.089327,80.269968,Chennai,Tamil Nadu,highway,dusk,12.1,81.8,28.3,6.5,77.2,good,87.0,SYNTHETIC_DEMO
+LIGHT-0112,13.077045,80.274483,Chennai,Tamil Nadu,arterial,day,7.1,74.1,1.1,13.7,46.3,good,94.5,SYNTHETIC_DEMO
+LIGHT-0113,13.086791,80.261563,Chennai,Tamil Nadu,rural,dusk,1.6,21.5,35.6,14.5,12.2,poor,25.1,SYNTHETIC_DEMO
+LIGHT-0114,13.084686,80.261093,Chennai,Tamil Nadu,residential,day,8.4,37.7,73.3,15.0,14.0,good,65.9,SYNTHETIC_DEMO
+LIGHT-0115,13.089498,80.263864,Chennai,Tamil Nadu,market,night,3.7,99.0,48.9,14.5,40.7,moderate,58.2,SYNTHETIC_DEMO
+LIGHT-0116,17.383839,78.480151,Hyderabad,Telangana,collector,night,20.7,47.5,1.5,3.6,79.7,good,87.9,SYNTHETIC_DEMO
+LIGHT-0117,17.378397,78.486378,Hyderabad,Telangana,residential,night,22.8,56.9,14.0,4.9,58.2,good,85.1,SYNTHETIC_DEMO
+LIGHT-0118,17.377919,78.483833,Hyderabad,Telangana,market,day,12.6,55.0,72.7,12.3,49.8,good,83.1,SYNTHETIC_DEMO
+LIGHT-0119,17.37994,78.482749,Hyderabad,Telangana,arterial,dusk,9.7,97.3,65.3,16.0,60.2,good,65.6,SYNTHETIC_DEMO
+LIGHT-0120,17.390454,78.486442,Hyderabad,Telangana,market,night,10.3,41.7,23.0,8.0,19.5,moderate,54.2,SYNTHETIC_DEMO
+LIGHT-0121,23.837868,91.289164,Agartala,Tripura,rural,night,20.7,58.5,63.1,8.3,26.9,good,74.0,SYNTHETIC_DEMO
+LIGHT-0122,23.833493,91.290642,Agartala,Tripura,highway,day,20.3,54.3,0.9,10.7,55.1,good,100,SYNTHETIC_DEMO
+LIGHT-0123,23.837715,91.284924,Agartala,Tripura,arterial,day,16.2,73.0,34.1,15.4,62.8,good,100,SYNTHETIC_DEMO
+LIGHT-0124,23.829972,91.277334,Agartala,Tripura,arterial,night,10.7,69.5,57.1,19.8,65.7,moderate,64.3,SYNTHETIC_DEMO
+LIGHT-0125,23.830803,91.284862,Agartala,Tripura,arterial,night,4.6,14.1,48.7,4.4,13.3,poor,32.3,SYNTHETIC_DEMO
+LIGHT-0126,26.849981,80.955668,Lucknow,Uttar Pradesh,collector,day,4.1,22.0,11.0,7.9,78.2,good,70.6,SYNTHETIC_DEMO
+LIGHT-0127,26.851701,80.948281,Lucknow,Uttar Pradesh,market,night,11.8,76.4,73.9,13.6,3.2,moderate,60.2,SYNTHETIC_DEMO
+LIGHT-0128,26.839228,80.946391,Lucknow,Uttar Pradesh,highway,night,15.1,42.2,72.3,4.0,95.2,moderate,55.7,SYNTHETIC_DEMO
+LIGHT-0129,26.85253,80.95151,Lucknow,Uttar Pradesh,collector,night,12.0,47.1,1.4,11.9,9.1,good,68.2,SYNTHETIC_DEMO
+LIGHT-0130,26.845125,80.954161,Lucknow,Uttar Pradesh,highway,night,15.4,87.3,37.8,11.5,19.8,good,74.1,SYNTHETIC_DEMO
+LIGHT-0131,30.312374,78.040237,Dehradun,Uttarakhand,residential,dusk,15.0,18.6,65.1,14.1,23.6,good,68.1,SYNTHETIC_DEMO
+LIGHT-0132,30.320418,78.023773,Dehradun,Uttarakhand,rural,day,2.1,21.3,35.9,3.5,41.7,moderate,38.0,SYNTHETIC_DEMO
+LIGHT-0133,30.323591,78.033152,Dehradun,Uttarakhand,arterial,day,6.3,90.0,55.8,18.6,35.3,good,73.5,SYNTHETIC_DEMO
+LIGHT-0134,30.324468,78.039059,Dehradun,Uttarakhand,collector,dusk,10.8,32.4,58.8,16.9,40.2,moderate,55.1,SYNTHETIC_DEMO
+LIGHT-0135,30.315593,78.024991,Dehradun,Uttarakhand,residential,dusk,10.3,60.4,20.9,11.6,12.2,good,86.8,SYNTHETIC_DEMO
+LIGHT-0136,22.575991,88.364445,Kolkata,West Bengal,collector,dusk,4.0,49.6,73.7,6.6,34.9,moderate,38.3,SYNTHETIC_DEMO
+LIGHT-0137,22.57606,88.360547,Kolkata,West Bengal,rural,day,20.4,95.3,62.9,7.1,64.3,good,100,SYNTHETIC_DEMO
+LIGHT-0138,22.576657,88.354946,Kolkata,West Bengal,collector,night,22.5,59.5,73.7,5.2,57.3,good,90.2,SYNTHETIC_DEMO
+LIGHT-0139,22.578841,88.355123,Kolkata,West Bengal,market,night,8.4,100.0,21.7,16.7,62.5,good,66.6,SYNTHETIC_DEMO
+LIGHT-0140,22.575382,88.370077,Kolkata,West Bengal,rural,night,11.7,49.6,22.0,11.4,39.6,moderate,52.6,SYNTHETIC_DEMO
+LIGHT-0141,11.63073,92.719363,Port Blair,Andaman and Nicobar Islands,highway,day,6.3,20.1,29.0,12.2,63.8,moderate,64.8,SYNTHETIC_DEMO
+LIGHT-0142,11.622334,92.717821,Port Blair,Andaman and Nicobar Islands,residential,night,2.1,93.4,6.6,10.5,48.6,moderate,57.7,SYNTHETIC_DEMO
+LIGHT-0143,11.618356,92.721645,Port Blair,Andaman and Nicobar Islands,collector,day,9.0,9.9,27.8,10.2,52.5,moderate,59.8,SYNTHETIC_DEMO
+LIGHT-0144,11.627271,92.735496,Port Blair,Andaman and Nicobar Islands,collector,day,1.6,18.7,63.5,17.4,4.2,moderate,56.3,SYNTHETIC_DEMO
+LIGHT-0145,11.616689,92.7362,Port Blair,Andaman and Nicobar Islands,highway,dusk,10.2,95.4,70.6,6.9,60.2,good,76.3,SYNTHETIC_DEMO
+LIGHT-0146,30.726308,76.769758,Chandigarh,Chandigarh,highway,day,3.0,32.0,49.8,3.0,91.1,moderate,59.2,SYNTHETIC_DEMO
+LIGHT-0147,30.734486,76.778335,Chandigarh,Chandigarh,rural,dusk,22.0,88.7,56.6,19.0,20.1,good,81.6,SYNTHETIC_DEMO
+LIGHT-0148,30.734025,76.781485,Chandigarh,Chandigarh,collector,night,11.5,86.8,57.2,3.5,90.7,good,84.5,SYNTHETIC_DEMO
+LIGHT-0149,30.731338,76.781434,Chandigarh,Chandigarh,rural,dusk,14.5,65.8,63.7,19.1,36.6,good,77.5,SYNTHETIC_DEMO
+LIGHT-0150,30.728683,76.785179,Chandigarh,Chandigarh,arterial,day,20.1,73.1,3.3,8.6,64.0,good,100,SYNTHETIC_DEMO
+LIGHT-0151,20.391387,72.82638,Daman,Dadra and Nagar Haveli and Daman and Diu,rural,night,9.1,12.2,4.8,4.3,94.6,moderate,48.8,SYNTHETIC_DEMO
+LIGHT-0152,20.391499,72.827228,Daman,Dadra and Nagar Haveli and Daman and Diu,market,dusk,9.8,13.9,68.5,14.9,39.9,moderate,60.4,SYNTHETIC_DEMO
+LIGHT-0153,20.399005,72.824705,Daman,Dadra and Nagar Haveli and Daman and Diu,arterial,dusk,4.7,72.4,7.9,13.3,60.8,good,70.2,SYNTHETIC_DEMO
+LIGHT-0154,20.404747,72.839954,Daman,Dadra and Nagar Haveli and Daman and Diu,market,night,23.1,90.8,24.2,6.0,66.4,good,97.8,SYNTHETIC_DEMO
+LIGHT-0155,20.398181,72.830486,Daman,Dadra and Nagar Haveli and Daman and Diu,highway,dusk,1.6,69.9,9.2,11.4,39.9,moderate,64.8,SYNTHETIC_DEMO
+LIGHT-0156,28.61764,77.206401,New Delhi,Delhi,arterial,day,21.7,13.2,74.0,9.1,16.7,good,75.6,SYNTHETIC_DEMO
+LIGHT-0157,28.619316,77.217884,New Delhi,Delhi,highway,dusk,7.0,46.4,32.8,10.0,99.5,good,66.7,SYNTHETIC_DEMO
+LIGHT-0158,28.606872,77.215527,New Delhi,Delhi,residential,dusk,13.7,0.8,19.4,5.2,74.0,good,70.5,SYNTHETIC_DEMO
+LIGHT-0159,28.615447,77.204687,New Delhi,Delhi,rural,night,7.6,99.5,67.6,4.4,31.6,moderate,50.7,SYNTHETIC_DEMO
+LIGHT-0160,28.617829,77.203608,New Delhi,Delhi,residential,night,1.8,53.5,56.3,16.0,36.5,poor,33.0,SYNTHETIC_DEMO
+LIGHT-0161,34.081279,74.791262,Srinagar,Jammu and Kashmir,market,night,6.1,44.5,10.5,8.7,66.2,moderate,49.3,SYNTHETIC_DEMO
+LIGHT-0162,34.089809,74.787638,Srinagar,Jammu and Kashmir,rural,day,11.8,68.6,12.4,6.4,84.3,good,98.0,SYNTHETIC_DEMO
+LIGHT-0163,34.076825,74.803342,Srinagar,Jammu and Kashmir,residential,night,3.0,24.4,18.7,14.2,93.5,moderate,43.8,SYNTHETIC_DEMO
+LIGHT-0164,34.080251,74.803655,Srinagar,Jammu and Kashmir,collector,day,12.7,13.9,3.6,19.0,63.9,good,87.8,SYNTHETIC_DEMO
+LIGHT-0165,34.079543,74.802607,Srinagar,Jammu and Kashmir,arterial,dusk,18.3,36.3,60.7,6.2,48.9,good,75.7,SYNTHETIC_DEMO
+LIGHT-0166,34.155784,77.573181,Leh,Ladakh,residential,night,7.7,33.1,56.7,7.4,88.7,moderate,54.1,SYNTHETIC_DEMO
+LIGHT-0167,34.145218,77.570018,Leh,Ladakh,rural,dusk,18.7,5.6,19.3,19.4,22.3,good,81.4,SYNTHETIC_DEMO
+LIGHT-0168,34.158317,77.580443,Leh,Ladakh,market,day,16.4,59.0,57.2,9.7,8.0,good,81.8,SYNTHETIC_DEMO
+LIGHT-0169,34.149803,77.572506,Leh,Ladakh,residential,day,4.5,37.9,47.9,17.3,1.4,moderate,59.6,SYNTHETIC_DEMO
+LIGHT-0170,34.155085,77.569418,Leh,Ladakh,collector,night,20.7,79.9,42.1,3.9,84.4,good,95.7,SYNTHETIC_DEMO
+LIGHT-0171,10.571711,72.635937,Kavaratti,Lakshadweep,arterial,dusk,16.7,86.7,57.4,19.2,69.0,good,93.4,SYNTHETIC_DEMO
+LIGHT-0172,10.568506,72.648601,Kavaratti,Lakshadweep,rural,dusk,18.2,61.5,72.3,12.8,73.1,good,73.8,SYNTHETIC_DEMO
+LIGHT-0173,10.563981,72.645942,Kavaratti,Lakshadweep,residential,day,1.2,44.5,51.4,4.0,58.7,moderate,56.2,SYNTHETIC_DEMO
+LIGHT-0174,10.562619,72.637476,Kavaratti,Lakshadweep,rural,day,3.3,7.9,5.8,11.8,29.4,moderate,59.9,SYNTHETIC_DEMO
+LIGHT-0175,10.568623,72.651306,Kavaratti,Lakshadweep,residential,dusk,16.8,48.7,26.8,10.7,60.7,good,85.3,SYNTHETIC_DEMO
+LIGHT-0176,11.94421,79.811579,Puducherry,Puducherry,arterial,day,9.8,27.4,28.4,8.8,83.6,good,79.8,SYNTHETIC_DEMO
+LIGHT-0177,11.949056,79.810524,Puducherry,Puducherry,rural,day,22.1,20.8,7.5,16.8,63.8,good,100,SYNTHETIC_DEMO
+LIGHT-0178,11.943809,79.81106,Puducherry,Puducherry,market,day,18.4,66.4,53.7,10.2,88.5,good,100,SYNTHETIC_DEMO
+LIGHT-0179,11.934422,79.810373,Puducherry,Puducherry,highway,night,22.4,0.2,37.2,19.9,37.8,good,66.8,SYNTHETIC_DEMO
+LIGHT-0180,11.940787,79.810487,Puducherry,Puducherry,residential,dusk,3.9,15.8,34.8,16.9,6.1,moderate,44.4,SYNTHETIC_DEMO

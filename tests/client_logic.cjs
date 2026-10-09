@@ -81,8 +81,8 @@ const context=vm.createContext({
       routeRequests++;
       const line=[[78,17],[78.005,17],[78.01,17]];
       return{ok:true,json:async()=>({warnings:[],routes:[
-        {id:0,recommended:false,recommendation_basis:'travel_time',preference:'balanced',distance:1113,duration:600,geometry:{type:'LineString',coordinates:line},steps:[{index:1,text:'Turn left',point:line[1],maneuver_point:line[1]}],demo:{demo_safety_score:0,demo_crime_index:0,status:'DEMO_RECORDS_FOUND'}},
-        {id:1,recommended:true,recommendation_basis:'travel_time',preference:'short',distance:1200,duration:300,geometry:{type:'LineString',coordinates:line},steps:[],demo:{demo_safety_score:null,demo_crime_index:null,status:'NO_DEMO_RECORDS_NEAR_ROUTE'}},
+        {id:0,recommended:false,recommendation_basis:'demo_balanced',preference:'balanced',distance:1113,duration:600,geometry:{type:'LineString',coordinates:line},steps:[{index:1,text:'Turn left',point:line[1],maneuver_point:line[1]}],demo:{demo_safety_score:0,demo_crime_index:0},lighting:{lighting_score:76,lighting_source:'demo_ml_estimate'}},
+        {id:1,recommended:true,recommendation_basis:'provider_fastest',preference:'short',distance:1200,duration:300,geometry:{type:'LineString',coordinates:line},steps:[],demo:{demo_safety_score:null,demo_crime_index:null},lighting:{lighting_score:null,lighting_source:'unavailable'}},
       ]})};
     }
     return{ok:true,json:async()=>({places:[]})};
@@ -112,9 +112,11 @@ const position=(longitude,latitude=17,accuracy=8,heading=null,speed=0)=>({coords
   const cards=get('route-cards').children,firstStats=cards[0].children[2].children,secondStats=cards[1].children[2].children;
   assert.equal(firstStats[0].children[0].textContent,'0/100','Valid zero safety score must render');
   assert.equal(firstStats[1].children[0].textContent,'0/100','Valid zero crime index must render');
+  assert.equal(firstStats[2].children[0].textContent,'76/100','Lighting ML score renders on its route');
+  assert.match(firstStats[2].children[1].textContent,/Demo ML estimate/);
   assert.doesNotMatch(textContent(cards[0]),/Sample incidents/,'Incidents are not displayed in route cards');
-  assert.equal(secondStats[0].children[0].textContent,'—','Missing safety metric must render as an em dash');
-  assert.equal(secondStats[1].children[0].textContent,'—','Missing crime metric must render as an em dash');
+  assert.equal(secondStats[0].children[0].textContent,'—/100','Missing safety metric must render as an em dash');
+  assert.equal(secondStats[1].children[0].textContent,'—/100','Missing crime metric must render as an em dash');
   assert.equal(facilityRequests,1,'Route planning loads facilities around the selected start');
   assert.equal(get('help-list').children.length,3,get('facility-status').textContent);
   assert.ok(textContent(get('help-list')).includes('straight-line distance'));
@@ -185,5 +187,20 @@ const position=(longitude,latitude=17,accuracy=8,heading=null,speed=0)=>({coords
   assert.match(html,/id="map-hint"[\s\S]*?id="nav-panel"/,'Navigation overlays are map children for fullscreen use');
   assert.match(css,/\.map-shell\.expanded/,'Fullscreen map overlay styles exist');
   assert.match(css,/@media\(max-width:800px\)/,'Mobile overlay styles exist');
-  console.log('Client checks passed: route selection and scores, synthetic GPS heading/progress/errors/cleanup, facility filtering/throttling, fullscreen/mobile overlay contracts.');
+  run(`state.routes = [0,1,2].map((id) => ({id, distance:1100,duration:600,preference:'balanced',recommended:id===0,
+    recommendation_basis:'demo_balanced',geometry:{type:'LineString',coordinates:[[78,17],[78.01,17]]},steps:[],
+    demo:{demo_safety_score:[82,74,90][id],demo_crime_index:[23,30,12][id]},
+    lighting:{lighting_score:id===0?76:id===1?65:null,lighting_source:id===2?'unavailable':'demo_data_fallback'}})); state.selected=0;renderRoutes();`);
+  assert.equal(get('route-cards').children.length,3,'All provider routes remain available');
+  const routeCards=get('route-cards').children;
+  assert.equal(routeCards[0].children[2].children[0].children[0].textContent,'82/100','Safety is route-specific');
+  assert.equal(routeCards[0].children[2].children[1].children[0].textContent,'23/100','Crime risk is route-specific');
+  assert.equal(routeCards[0].children[2].children[2].children[0].textContent,'76/100','Lighting is route-specific');
+  assert.match(textContent(routeCards[1]),/65\/100/,'Another route has a distinct lighting value');
+  assert.match(textContent(routeCards[0]),/Demo data fallback/);
+  assert.match(textContent(routeCards[2]),/—\/100/,'Uncovered route does not receive an invented rating');
+  assert.match(textContent(routeCards[0]),/★ Demo Recommended/);
+  assert.doesNotMatch(html,/lighting-toggle|OSM lighting evidence/,'The real street-lamp overlay controls are removed');
+  assert.match(html,/Demo ratings generated using synthetic data and are not verified real-world safety or lighting conditions\./);
+  console.log('Client checks passed: three route cards and independent DEMO scores, route selection, synthetic GPS heading/progress/errors/cleanup, facility filtering/throttling, fullscreen/mobile overlay contracts.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -1,0 +1,45 @@
+{
+  "status": "TRAINED",
+  "algorithm": "RandomForestRegressor",
+  "dataset": "demo_data/lighting.csv",
+  "dataset_records": 180,
+  "train_records": 135,
+  "test_records": 45,
+  "dataset_seed": 20261009,
+  "split_random_state": 42,
+  "feature_schema": {
+    "categorical": [
+      "road_type",
+      "time_period"
+    ],
+    "numeric": [
+      "streetlight_density",
+      "ambient_light_index",
+      "tree_canopy_percent",
+      "road_width_m",
+      "built_density"
+    ],
+    "target": "lighting_score",
+    "excluded": [
+      "record_id",
+      "city",
+      "state",
+      "latitude",
+      "longitude",
+      "lighting_condition"
+    ]
+  },
+  "label_generation": "lighting_score = clip(30 + 2.2*streetlight_density + 0.25*ambient_light_index - 0.18*tree_canopy_percent + 0.35*road_width_m + 0.12*built_density + road adjustment + time adjustment + Gaussian N(0, 5.5), 0, 100); lighting_condition is derived from the score and excluded from features.",
+  "evaluation_label": "Performance on SYNTHETIC DEMO DATA only; not real-world accuracy.",
+  "metrics": {
+    "mae": 8.743164744268077,
+    "rmse": 10.729679206877995,
+    "r2": 0.6265469947267402
+  },
+  "scikit_learn_version": "1.9.1",
+  "numpy_version": "2.5.3",
+  "pandas_version": "3.0.6",
+  "joblib_version": "1.6.0",
+  "python_version": "3.14.7",
+  "python_version_family": "3.14"
+}

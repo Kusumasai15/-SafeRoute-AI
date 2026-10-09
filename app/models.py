@@ -1,4 +1,52 @@
+import importlib.abc
+import importlib.machinery
+import importlib.util
+import sys
+import sysconfig
 from datetime import datetime, timezone
+from pathlib import Path
+
+
+class _PythonOnlySQLAlchemyCythonFinder(importlib.abc.MetaPathFinder):
+    """Use the Python fallback modules when Windows blocks SQLAlchemy .pyd files."""
+
+    _MODULES = {
+        'sqlalchemy.engine._util_cy': '_util_cy.py',
+        'sqlalchemy.engine._processors_cy': '_processors_cy.py',
+        'sqlalchemy.engine._result_cy': '_result_cy.py',
+        'sqlalchemy.engine._row_cy': '_row_cy.py',
+    }
+
+    @staticmethod
+    def _engine_dir():
+        for name in ('purelib', 'platlib'):
+            value = sysconfig.get_paths().get(name)
+            if value:
+                candidate = Path(value) / 'sqlalchemy' / 'engine'
+                if candidate.exists():
+                    return candidate
+        return None
+
+    def find_spec(self, fullname, path=None, target=None):
+        source = self._MODULES.get(fullname)
+        if source is None:
+            return None
+        engine_dir = self._engine_dir()
+        if engine_dir is None:
+            return None
+        module_path = engine_dir / source
+        if not module_path.exists():
+            return None
+        return importlib.util.spec_from_file_location(
+            fullname,
+            str(module_path),
+            loader=importlib.machinery.SourceFileLoader(fullname, str(module_path)),
+        )
+
+
+if not any(isinstance(finder, _PythonOnlySQLAlchemyCythonFinder) for finder in sys.meta_path):
+    sys.meta_path.insert(0, _PythonOnlySQLAlchemyCythonFinder())
+
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()

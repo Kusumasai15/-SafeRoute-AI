@@ -224,6 +224,8 @@ def check_hash(value):
 def test_route_recommendation_uses_time_then_distance(client, monkeypatch):
     from app import routes as route_module
     monkeypatch.setattr(route_module, 'analyze_demo_route', lambda geometry: dict(demo_safety_score=None, demo_crime_index=None))
+    monkeypatch.setattr(route_module, 'score_route_lighting', lambda route: dict(
+        lighting_score=None, lighting_source='unavailable', lighting_label='DEMO lighting unavailable'))
     candidates = [
         dict(duration=900, distance=1000, geometry=feature()['geometry']),
         dict(duration=600, distance=1500, geometry=feature()['geometry']),
@@ -233,25 +235,30 @@ def test_route_recommendation_uses_time_then_distance(client, monkeypatch):
     response = client.post('/api/routes', json=dict(start=[17.4, 78.4], end=[17.42, 78.42], mode='walk'), headers=csrf(client))
     assert response.status_code == 200
     assert [route['recommended'] for route in response.json['routes']] == [False, False, True]
-    assert 'Fastest estimated travel time' in response.json['routes'][2]['recommendation_reason']
+    assert response.json['routes'][2]['recommendation_basis'] == 'provider_fastest'
+    assert "provider's fastest route" in response.json['routes'][2]['recommendation_reason']
 
 
 def test_demo_recommendation_compares_all_routes(client, monkeypatch):
-    candidates = [dict(duration=time, distance=distance, geometry={'index': index})
+    candidates = [dict(duration=time, distance=distance, geometry={**feature()['geometry'], 'index': index})
                   for index, (time, distance) in enumerate([(600, 1000), (700, 1200), (800, 1500)])]
     monkeypatch.setattr(geoapify, 'routes', lambda *args: dict(routes=candidates, warnings=[]))
     from app import routes as route_module
     monkeypatch.setattr(route_module, 'analyze_demo_route', lambda geometry: dict(
         demo_safety_score=[20, 90, 50][geometry['index']],
         demo_crime_index=[80, 10, 50][geometry['index']]))
+    monkeypatch.setattr(route_module, 'score_route_lighting', lambda route: dict(
+        lighting_score=[20, 90, 50][route['geometry']['index']],
+        lighting_source='demo_data_fallback', lighting_label='DEMO data fallback'))
     response = client.post('/api/routes', json=dict(start=[17.4, 78.4], end=[17.42, 78.42], mode='walk'), headers=csrf(client))
     assert response.status_code == 200
-    assert [route['recommended'] for route in response.json['routes']] == [True, False, False]
-    assert all(route['recommendation_basis'] == 'travel_time' for route in response.json['routes'])
+    assert [route['recommended'] for route in response.json['routes']] == [False, True, False]
+    assert all(route['recommendation_basis'] == 'demo_balanced' for route in response.json['routes'])
     assert all('comparison_score' not in route for route in response.json['routes'])
     assert response.json['routes'][0]['demo']['demo_safety_score'] == 20
     assert response.json['routes'][0]['demo']['demo_crime_index'] == 80
     assert 'demo_crime_rate' not in response.json['routes'][0]['demo']
+    assert response.json['routes'][1]['lighting']['lighting_score'] == 90
 
 
 def test_places_enforce_five_kilometres_and_deduplicate(client, monkeypatch):
@@ -308,4 +315,4 @@ def test_home_exposes_navigation_and_facility_controls(client):
     assert b'id="follow"' in response.data
     assert b'id="recenter"' in response.data
     assert b'id="facility-toggles"' in response.data
-    assert b'Synthetic demo only' in response.data
+    assert b'Demo ratings generated using synthetic data and are not verified real-world safety or lighting conditions.' in response.data

@@ -8,7 +8,8 @@ SafeWalk is a Flask web application for planning a journey, comparing route opti
 
 - Search for starting points and destinations, or use the device's current location.
 - Request walking, cycling, motorcycle, or driving routes from Geoapify. Up to three distinct options are shown; overlapping routes or provider failures can result in fewer.
-- Compare route distance, estimated travel time, a demo safety score, and a demo crime index. The fastest estimated route is selected by default; distance breaks ties. Demo metrics never rank or recommend routes.
+- Compare route distance, estimated travel time, DEMO safety and crime-risk ratings, and a route-specific lighting estimate from fictional sample locations. A fitted RandomForestRegressor is used when its trusted artifact is available; otherwise the UI explicitly labels the distance-weighted observed-data fallback. See [synthetic lighting and ML details](docs/LIGHTING.md).
+- Show a ★ Demo Recommended route using the documented safety/crime/lighting/time/distance formula. Missing ratings select the provider's fastest route instead; excessive detours are excluded.
 - Start GPS navigation with a moving position arrow, accuracy display, map-follow and recenter controls, provider turn instructions, remaining distance and estimated time, off-route feedback, and a manual arrival check-in.
 - Find Geoapify listings for hospitals, police stations, and pharmacies within 5 km. Filter categories, view distinct map markers, and inspect straight-line distances. Results are cached briefly by the running server process.
 - Save up to five emergency contacts in the browser, choose a primary contact, and use user-initiated call actions.
@@ -17,9 +18,11 @@ SafeWalk is a Flask web application for planning a journey, comparing route opti
 
 ## Safety and data limitations
 
-The bundled `demo_data/safety.csv` and `demo_data/crime.csv` files contain synthetic samples. The route-specific demo safety scores and crime indices are calculated from those CSV fields and nearby samples along route geometry; they are **not verified real-world measurements**. In particular, a crime index out of 100 is an index, **not a crime percentage or a population crime rate**.
+The bundled `demo_data/safety.csv`, `demo_data/crime.csv`, and `demo_data/lighting.csv` contain fictional synthetic samples. The lighting dataset has five generated sample locations in each of India's 28 states and 8 union territories. It does not provide complete geographic coverage; no sample near a route means its lighting rating is “—/100”. The route-specific safety, crime-risk, and lighting ratings are **not verified real-world measurements**. In particular, a crime index out of 100 is an index, **not a crime percentage or a population crime rate**.
 
 Missing demo samples remain unavailable and are displayed as “—”. They do not mean the route is safe, unsafe, or otherwise verified. The separate synthetic incidents CSV is retained as sample data but is not displayed on route cards or used to select routes.
+
+Lighting labels are generated from synthetic road/time/environment features using a fixed, documented formula with Gaussian noise. `lighting_score` is the target, and `lighting_condition`, IDs, coordinates, city/state, and all label-derived fields are excluded from model inputs. The offline `RandomForestRegressor` is trained, saved in `demo_data/lighting_model.joblib`, and loaded for per-route estimates; Flask never trains inside a request. Held-out metrics are MAE **8.74**, RMSE **10.73**, and R² **0.627** on **SYNTHETIC DEMO DATA only**, not real-world accuracy. Recreate the dataset, metrics, model, and metadata with `python -m scripts.train_lighting_model`.
 
 Nearby facility distances are straight-line distances, not walking or driving distances. Geoapify/OSM-based listings do not establish that a facility is open, staffed, or operational. Check facilities independently.
 
@@ -27,12 +30,12 @@ GPS navigation requires browser location permission, a supported device, and suf
 
 ## Technology and architecture
 
-- **Backend:** Python, Flask, Flask-SQLAlchemy, SQLAlchemy, Requests, and Psycopg 3 for PostgreSQL.
+- **Backend and ML:** Python, Flask, Flask-SQLAlchemy, Pandas, NumPy, scikit-learn, Joblib, Requests, and Psycopg 3 for PostgreSQL.
 - **Map and client:** Leaflet 1.9.4, OpenStreetMap tiles, HTML, CSS, and browser JavaScript without a frontend framework.
 - **External services:** Geoapify Geocoding, Routing, and Places APIs. The Geoapify API key is used by Flask and is not sent to browser JavaScript.
 - **Storage:** SQLite for local development; PostgreSQL for Vercel deployments. Emergency contacts are stored in browser `localStorage`.
 
-The Flask app factory in `app/__init__.py` configures security and database access. `app/routes.py` implements the HTML pages and HTTP API. `app/services/geoapify.py` calls the map provider and normalizes routes and facility listings; `app/services/demo_service.py` calculates synthetic CSV metrics. The browser renders routes and map overlays and obtains GPS updates directly through the browser Geolocation API.
+The Flask app factory in `app/__init__.py` configures security and database access. `app/routes.py` implements the HTML pages and HTTP API. `app/services/geoapify.py` calls the map provider and normalizes routes and facility listings; `app/services/demo_service.py` calculates synthetic safety/crime metrics; `app/services/lighting_ml.py` generates the lighting CSV, scores route-local samples, loads a pre-trained artifact, and ranks fully covered routes. The browser renders routes and obtains GPS updates directly through the browser Geolocation API.
 
 ## Project structure
 
@@ -43,18 +46,20 @@ The Flask app factory in `app/__init__.py` configures security and database acce
 │   ├── models.py             # Admin, report, and audit database models
 │   ├── routes.py             # Pages and JSON API endpoints
 │   ├── services/
-│   │   ├── demo_service.py   # Synthetic CSV route metrics
+│   │   ├── demo_service.py   # Synthetic safety/crime route metrics
+│   │   ├── lighting_ml.py    # Synthetic lighting, model loading and recommendation
 │   │   └── geoapify.py       # Provider requests and normalization
 │   ├── static/               # Browser JavaScript and CSS
 │   └── templates/            # Traveller and admin HTML templates
-├── demo_data/                # Fictional safety, crime, and incident CSVs
+├── demo_data/                # Fictional safety, crime, lighting and incident data
+├── scripts/                  # Reproducible ML training command
 ├── docs/                     # Architecture, validation, sources, Vercel notes
 ├── public/static/            # Static assets copied for Vercel deployment
 ├── tests/                    # Pytest API/service tests and Node client checks
 ├── build.py                  # Copies app/static assets into public/static
 ├── main.py                   # Vercel Flask entry point
 ├── run.py                    # Local Flask entry point
-├── requirements.txt          # Runtime Python dependencies
+├── requirements.txt          # Flask and ML runtime dependencies
 ├── requirements-dev.txt      # Test dependency
 └── vercel.json               # Vercel build and function configuration
 ```

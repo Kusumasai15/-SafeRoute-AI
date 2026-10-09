@@ -124,20 +124,16 @@ function renderRoutes() {
     );
 
     header.append(title, travel);
-    card.append(header,node('span','SYNTHETIC DEMO DATA','demo-badge'));
+    card.append(header,node('span','SYNTHETIC DEMO','demo-badge'));
 
     const demo = route.demo;
-    const available =
-      demo && demo.status !== 'DEMO_DATA_UNAVAILABLE';
-
     function score(value) {
-      return available &&
-        typeof value === 'number' &&
+      return typeof value === 'number' &&
         Number.isFinite(value) &&
         value >= 0 &&
         value <= 100
           ? `${Math.round(value)}/100`
-          : '—';
+          : '—/100';
     }
 
     function statistic(value, label) {
@@ -149,26 +145,32 @@ function renderRoutes() {
       return box;
     }
 
-    const statistics = node(
-      'div',
-      undefined,
-      'demo-statistics'
-    );
-
+    const statistics = node('div', undefined, 'demo-statistics');
+    const lighting = route.lighting || {};
+    const lightingLabel = lighting.lighting_source === 'demo_ml_estimate'
+      ? 'Demo ML estimate'
+      : lighting.lighting_source === 'demo_data_fallback'
+        ? 'Demo data fallback'
+        : 'Demo data unavailable';
     statistics.append(
-      statistic(
-        score(demo?.demo_safety_score),
-        'Demo safety score'
-      ),
-      statistic(
-        score(demo?.demo_crime_index),
-        'Demo crime index'
-      )
+      statistic(score(demo?.demo_safety_score), 'Safety · DEMO'),
+      statistic(score(demo?.demo_crime_index), 'Crime Risk · DEMO'),
+      statistic(score(lighting.lighting_score), `Lighting: ${lightingLabel}`)
     );
-
     card.append(statistics);
-
-    card.append(node('p',available?'Synthetic demo only — not real safety or crime rates.':'Synthetic demo only — not real safety or crime rates. Demo data unavailable.','demo-card-note'));
+    const facilities = node('div', undefined, 'route-facilities');
+    const police = route.demo?.police_distance_meters;
+    const hospital = route.demo?.hospital_distance_meters;
+    facilities.append(node('small',
+      `Police distance: ${typeof police === 'number' ? km(police) : '—'} · Hospital distance: ${typeof hospital === 'number' ? km(hospital) : '—'}`));
+    card.append(facilities);
+    if (route.recommended) {
+      card.append(node('small',
+        route.recommendation_basis === 'demo_balanced'
+          ? '★ Demo Recommended'
+          : '★ Fastest route · demo ratings unavailable',
+        'route-recommendation'));
+    }
 
     function selectRoute() {
       stopNavigation();
