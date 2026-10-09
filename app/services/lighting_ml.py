@@ -1,9 +1,11 @@
 """Synthetic India-wide lighting data and its optional supervised demo model."""
 import csv
 import json
+import hashlib
 import logging
 import math
 import platform
+import pickle
 from functools import lru_cache
 from pathlib import Path
 
@@ -197,13 +199,75 @@ def load_model():
         if not hasattr(artifact.get("model"), "predict"):
             raise ValueError("Lighting model artifact has no prediction interface.")
         return artifact, "trained"
-    except (ImportError, OSError, EOFError, ValueError, KeyError, AttributeError) as error:
-        logger.warning("Pre-trained lighting model unavailable; using labeled demo-data fallback: %s", error)
+    except (ImportError, ModuleNotFoundError, OSError, EOFError, ValueError, KeyError,
+            AttributeError, TypeError, pickle.UnpicklingError) as error:
+        logger.warning("Pre-trained lighting model unavailable; using deterministic rule fallback: %s", error)
         return None, "unavailable"
 
 
-def score_route_lighting(route, dataset_path=DATASET_PATH):
-    """Aggregate nearby records independently for one route using distance weights."""
+def route_profile_seed(geometry, mode, seed=DATASET_SEED):
+    """Create a stable per-route RNG seed from geometry, travel mode, and dataset seed."""
+    coordinates = geometry.get("coordinates")
+
+    def normalize(value):
+        if isinstance(value, list):
+            return [normalize(item) for item in value]
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return round(float(value), 6)
+        return value
+
+    identity = json.dumps(
+        {"geometry": {"type": geometry.get("type"), "coordinates": normalize(coordinates)},
+         "mode": str(mode), "seed": int(seed)},
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return int.from_bytes(hashlib.sha256(identity).digest()[:8], "big")
+
+
+def synthetic_route_profile(geometry, mode, seed=DATASET_SEED):
+    """Generate model features deterministically without depending on route coverage."""
+    rng = np.random.default_rng(route_profile_seed(geometry, mode, seed))
+    profile = {
+        "road_type": str(rng.choice(tuple(ROAD_ADJUSTMENT))),
+        "time_period": str(rng.choice(tuple(TIME_ADJUSTMENT))),
+        "streetlight_density": round(float(rng.uniform(1, 24)), 1),
+        "ambient_light_index": round(float(rng.uniform(0, 100)), 1),
+        "tree_canopy_percent": round(float(rng.uniform(0, 75)), 1),
+        "road_width_m": round(float(rng.uniform(3, 20)), 1),
+        "built_density": round(float(rng.uniform(0, 100)), 1),
+    }
+    return profile
+
+
+def _feature_frame(profiles):
+    import pandas as pd
+
+    return pd.DataFrame(
+        [{name: profile[name] for name in FEATURE_COLUMNS} for profile in profiles],
+        columns=FEATURE_COLUMNS,
+    )
+
+
+def _rule_based_score(profile, geometry, mode, seed):
+    """Bounded deterministic fallback using the synthetic label formula and hash noise."""
+    rng = np.random.default_rng(route_profile_seed(geometry, mode, seed))
+    score = (
+        30 + 2.2 * profile["streetlight_density"]
+        + 0.25 * profile["ambient_light_index"]
+        - 0.18 * profile["tree_canopy_percent"]
+        + 0.35 * profile["road_width_m"]
+        + 0.12 * profile["built_density"]
+        + ROAD_ADJUSTMENT[profile["road_type"]]
+        + TIME_ADJUSTMENT[profile["time_period"]]
+        + float(rng.normal(0, 5.5))
+    )
+    return round(min(100.0, max(0.0, score)), 1)
+
+
+def score_route_lighting(route, mode="walk", dataset_path=DATASET_PATH, seed=DATASET_SEED):
+    """Always return a deterministic 0–100 synthetic rating for a valid route."""
     segments = route_segments(route["geometry"])
     if not segments:
         raise ValueError("Route has no usable geometry for lighting scoring.")
@@ -234,51 +298,54 @@ def score_route_lighting(route, dataset_path=DATASET_PATH):
                            row.get("record_id", "<unknown>"), error)
             continue
 
-    result = {
-        "is_demo": True,
-        "lighting_score": None,
-        "lighting_source": "unavailable",
-        "lighting_label": "DEMO lighting unavailable",
-        "lighting_sample_count": len(nearby),
-        "lighting_radius_meters": OBSERVATION_RADIUS_METERS,
-    }
-    if not nearby:
-        return result
-
     artifact, model_status = load_model()
     if artifact is not None:
         try:
-            import pandas as pd
-
-            feature_rows = []
-            for row, _, _ in nearby:
-                features = {name: row[name] for name in CATEGORICAL_FEATURES}
-                features.update({name: float(row[name]) for name in NUMERIC_FEATURES})
-                feature_rows.append(features)
-            features = pd.DataFrame(feature_rows, columns=FEATURE_COLUMNS)
-            predictions = artifact["model"].predict(features)
-            values = [min(100.0, max(0.0, float(value))) for value in predictions]
-            source = "demo_ml_estimate"
-            label = "DEMO ML estimate"
-        except (ImportError, OSError, ValueError, RuntimeError) as error:
-            logger.warning("Lighting model prediction failed; using labeled demo-data fallback: %s", error)
+            if nearby:
+                profiles = [
+                    {name: row[name] if name in CATEGORICAL_FEATURES else float(row[name])
+                     for name in FEATURE_COLUMNS}
+                    for row, _, _ in nearby
+                ]
+                predictions = artifact["model"].predict(_feature_frame(profiles))
+                values = [float(value) for value in predictions]
+                if len(values) != len(nearby) or not all(math.isfinite(value) for value in values):
+                    raise ValueError("Lighting model returned invalid predictions.")
+                values = [min(100.0, max(0.0, value)) for value in values]
+                total_weight = sum(weight for _, _, weight in nearby)
+                score = sum(value * weight for value, (_, _, weight) in zip(values, nearby)) / total_weight
+                source = "demo_ml_nearby"
+                label = "DEMO · ML nearby samples"
+            else:
+                profile = synthetic_route_profile(route["geometry"], mode, seed)
+                prediction = artifact["model"].predict(_feature_frame([profile]))[0]
+                score = float(prediction)
+                if not math.isfinite(score):
+                    raise ValueError("Lighting model returned a non-finite prediction.")
+                score = min(100.0, max(0.0, score))
+                source = "demo_ml_synthetic_profile"
+                label = "DEMO · ML synthetic profile"
+        except (ImportError, OSError, ValueError, RuntimeError, TypeError, IndexError,
+                FloatingPointError, OverflowError) as error:
+            logger.warning("Lighting model prediction failed; using deterministic rule fallback: %s", error)
             artifact = None
             model_status = "unavailable"
 
     if artifact is None:
-        source = "demo_data_fallback"
-        label = "DEMO data fallback"
-        values = [float(row["lighting_score"]) for row, _, _ in nearby]
+        profile = synthetic_route_profile(route["geometry"], mode, seed)
+        score = _rule_based_score(profile, route["geometry"], mode, seed)
+        source = "demo_rule_fallback"
+        label = "DEMO · rule-based fallback"
 
-    total_weight = sum(weight for _, _, weight in nearby)
-    result.update(
-        lighting_score=round(sum(value * weight for value, (_, _, weight) in zip(values, nearby))
-                             / total_weight, 1),
-        lighting_source=source,
-        lighting_label=label,
-        model_status=model_status,
-    )
-    return result
+    return {
+        "is_demo": True,
+        "lighting_score": round(min(100.0, max(0.0, score)), 1),
+        "lighting_source": source,
+        "lighting_label": label,
+        "lighting_sample_count": len(nearby),
+        "lighting_radius_meters": OBSERVATION_RADIUS_METERS,
+        "model_status": model_status,
+    }
 
 
 def recommend_routes(routes):

@@ -78,29 +78,7 @@ def test_feature_schema_excludes_target_labels_and_identifiers():
     assert lighting_ml.FEATURE_SCHEMA["target"] == "lighting_score"
 
 
-def test_route_specific_weighted_fallback_and_uncovered_route(tmp_path, monkeypatch):
-    dataset = tmp_path / "lighting.csv"
-    save_records(dataset, [
-        record("LIGHT-1", 77.59, 20, density=3),
-        record("LIGHT-2", 77.63, 85, density=8),
-    ])
-    monkeypatch.setattr(lighting_ml, "load_model", lambda: (None, "not_trained"))
-
-    first = lighting_ml.score_route_lighting(route(77.59), dataset)
-    second = lighting_ml.score_route_lighting(route(77.63), dataset)
-    uncovered = lighting_ml.score_route_lighting(route(77.70), dataset)
-
-    assert first["lighting_score"] == 20
-    assert second["lighting_score"] == 85
-    assert first["lighting_score"] != second["lighting_score"]
-    assert first["lighting_source"] == second["lighting_source"] == "demo_data_fallback"
-    assert first["lighting_sample_count"] == second["lighting_sample_count"] == 1
-    assert uncovered["lighting_score"] is None
-    assert uncovered["lighting_source"] == "unavailable"
-    assert uncovered["lighting_sample_count"] == 0
-
-
-def test_ml_prediction_contract_and_score_bounds(tmp_path, monkeypatch):
+def test_nearby_observations_use_route_specific_ml_and_uncovered_profile(tmp_path, monkeypatch):
     dataset = tmp_path / "lighting.csv"
     save_records(dataset, [
         record("LIGHT-1", 77.59, 20, density=3),
@@ -109,18 +87,72 @@ def test_ml_prediction_contract_and_score_bounds(tmp_path, monkeypatch):
 
     class FittedModel:
         def predict(self, features):
-            return [features.iloc[0]["streetlight_density"] * 20]
+            return features["streetlight_density"].to_numpy() * 10
 
     monkeypatch.setattr(lighting_ml, "load_model", lambda: (
         {"model": FittedModel(), "metadata": {"status": "TRAINED"}}, "trained"))
-    low = lighting_ml.score_route_lighting(route(77.59), dataset)
-    high = lighting_ml.score_route_lighting(route(77.63), dataset)
+    first = lighting_ml.score_route_lighting(route(77.59), dataset_path=dataset)
+    second = lighting_ml.score_route_lighting(route(77.63), dataset_path=dataset)
+    uncovered = lighting_ml.score_route_lighting(
+        route(90.0, latitude=20.0), dataset_path=dataset)
 
-    assert low["lighting_score"] == 60
-    assert high["lighting_score"] == 100
-    assert low["lighting_source"] == high["lighting_source"] == "demo_ml_estimate"
-    assert 0 <= low["lighting_score"] <= 100
-    assert 0 <= high["lighting_score"] <= 100
+    assert first["lighting_score"] == 30
+    assert second["lighting_score"] == 80
+    assert first["lighting_score"] != second["lighting_score"]
+    assert first["lighting_source"] == second["lighting_source"] == "demo_ml_nearby"
+    assert first["lighting_sample_count"] == second["lighting_sample_count"] == 1
+    assert uncovered["lighting_score"] is not None
+    assert 0 <= uncovered["lighting_score"] <= 100
+    assert uncovered["lighting_source"] == "demo_ml_synthetic_profile"
+    assert uncovered["lighting_sample_count"] == 0
+
+
+def test_synthetic_profile_is_stable_and_changes_with_geometry_mode_and_seed():
+    geometry = route(77.59)["geometry"]
+    profile = lighting_ml.synthetic_route_profile(geometry, "walk", 20261009)
+    assert profile == lighting_ml.synthetic_route_profile(geometry, "walk", 20261009)
+    assert profile != lighting_ml.synthetic_route_profile(geometry, "drive", 20261009)
+    assert profile != lighting_ml.synthetic_route_profile(geometry, "walk", 20261010)
+    assert profile != lighting_ml.synthetic_route_profile(
+        route(90.0, latitude=20.0)["geometry"], "walk", 20261009)
+    assert 1 <= profile["streetlight_density"] <= 24
+    assert 0 <= profile["ambient_light_index"] <= 100
+
+
+def test_no_model_uses_stable_bounded_route_specific_rule_fallback(tmp_path, monkeypatch):
+    lighting_ml._read_dataset.cache_clear()
+    monkeypatch.setattr(lighting_ml, "load_model", lambda: (None, "unavailable"))
+    first_route = route(90.0, latitude=20.0)
+    second_route = route(90.2, latitude=20.0)
+    first = lighting_ml.score_route_lighting(first_route, "walk", tmp_path / "absent.csv")
+    refresh = lighting_ml.score_route_lighting(first_route, "walk", tmp_path / "absent.csv")
+    second = lighting_ml.score_route_lighting(second_route, "walk", tmp_path / "absent.csv")
+
+    assert first["lighting_source"] == "demo_rule_fallback"
+    assert first["lighting_score"] == refresh["lighting_score"]
+    assert first["lighting_score"] != second["lighting_score"]
+    assert first["lighting_sample_count"] == second["lighting_sample_count"] == 0
+    assert all(0 <= result["lighting_score"] <= 100 for result in (first, refresh, second))
+
+
+@pytest.mark.parametrize("route_count", [1, 2, 3])
+def test_one_two_and_three_routes_all_get_numeric_lighting(tmp_path, monkeypatch, route_count):
+    lighting_ml._read_dataset.cache_clear()
+    class FittedModel:
+        def predict(self, features):
+            return features["streetlight_density"].to_numpy() * 4
+
+    monkeypatch.setattr(lighting_ml, "load_model", lambda: (
+        {"model": FittedModel(), "metadata": {"status": "TRAINED"}}, "trained"))
+    routes = [route(90.0 + index * 0.1, latitude=20.0) for index in range(route_count)]
+    results = [lighting_ml.score_route_lighting(item, "bicycle", tmp_path / "absent.csv")
+               for item in routes]
+    assert len(results) == route_count
+    assert all(isinstance(result["lighting_score"], float) for result in results)
+    assert all(0 <= result["lighting_score"] <= 100 for result in results)
+    assert all(result["lighting_source"] == "demo_ml_synthetic_profile" for result in results)
+    if route_count > 1:
+        assert len({result["lighting_score"] for result in results}) > 1
 
 
 def test_training_and_prediction_metrics_when_native_runtime_is_available(tmp_path, monkeypatch):
@@ -151,8 +183,8 @@ def test_training_and_prediction_metrics_when_native_runtime_is_available(tmp_pa
     lighting_ml.load_model.cache_clear()
     try:
         loaded_score = lighting_ml.score_route_lighting(
-            route(records[0]["longitude"], records[0]["latitude"]), dataset_path)
-        assert loaded_score["lighting_source"] == "demo_ml_estimate"
+            route(records[0]["longitude"], records[0]["latitude"]), dataset_path=dataset_path)
+        assert loaded_score["lighting_source"] == "demo_ml_nearby"
         assert 0 <= loaded_score["lighting_score"] <= 100
     finally:
         lighting_ml.load_model.cache_clear()
@@ -203,7 +235,8 @@ def test_missing_dataset_and_missing_artifact_are_not_fabricated(tmp_path, monke
     monkeypatch.setattr(lighting_ml, "MODEL_PATH", tmp_path / "missing-model.joblib")
     lighting_ml.load_model.cache_clear()
     assert lighting_ml.load_model() == (None, "not_trained")
-    result = lighting_ml.score_route_lighting(route(77.59), tmp_path / "absent.csv")
-    assert result["lighting_score"] is None
-    assert result["lighting_label"] == "DEMO lighting unavailable"
+    result = lighting_ml.score_route_lighting(route(77.59), dataset_path=tmp_path / "absent.csv")
+    assert isinstance(result["lighting_score"], float)
+    assert 0 <= result["lighting_score"] <= 100
+    assert result["lighting_source"] == "demo_rule_fallback"
     lighting_ml.load_model.cache_clear()

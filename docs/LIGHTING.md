@@ -62,18 +62,25 @@ python -m scripts.train_lighting_model
 The command prints actual metrics and saves the model and metadata. Train with
 the same Python major/minor version selected for the production Flask runtime;
 the loader checks the pinned ML dependency versions before trusting the artifact.
-If no usable model artifact exists, each covered route uses
-an explicitly labeled distance-weighted synthetic-data fallback; uncovered
-routes display `—/100`.
+If the model is unavailable, the app reports a deterministic rule-based synthetic
+fallback rather than claiming an ML prediction.
 
 ## Route ratings and recommendation
 
 Each returned route is matched independently against synthetic point
 observations using its Geoapify route geometry. Samples within 1,500 m receive
 weight `1 / (1 + distance_m / 250)^2`. A loaded model predicts each matching
-sample and those estimates are aggregated with the weights. When no model is
-available, the synthetic labels are aggregated the same way and marked as
-`DEMO data fallback`. With no nearby samples, no lighting rating is invented.
+sample and those estimates are aggregated with the weights; the source is
+`demo_ml_nearby`.
+
+When there are no matching samples, a stable SHA-256 hash of normalized route
+geometry, travel mode, and synthetic seed initializes a reproducible synthetic
+feature profile. The same fitted Random Forest predicts this profile, labeled
+`demo_ml_synthetic_profile`. The same inputs always produce the same profile
+and rating across refreshes. If model loading or prediction fails, a documented
+synthetic-label formula plus deterministic hash-seeded noise returns a bounded
+score labeled `demo_rule_fallback`. Every valid route therefore receives a
+numeric 0–100 score; no route coverage is claimed for generated profiles.
 
 Safety, crime risk, and lighting are calculated independently per route. The
 demo recommendation score is:
@@ -89,6 +96,8 @@ more than 1.5× the shortest distance are excluded to avoid excessive detours.
 If any required rating is unavailable, the provider's fastest route is
 recommended instead. The label is `★ Demo Recommended` when demo scoring is
 used; none of these values are verified real-world safety or lighting ratings.
+The UI displays: “Lighting ratings are simulated for demonstration purposes and
+do not represent actual street-lighting conditions.”
 
 The app retains Geoapify for route/places requests, Leaflet, and OpenStreetMap
 map tiles. It does not make Overpass/OSM street-lighting requests, cache live

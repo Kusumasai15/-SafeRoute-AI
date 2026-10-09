@@ -154,6 +154,28 @@
   color: #64766f;
 }
 
+.lighting-rating-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.lighting-rating-heading strong {
+  font-size: 16px;
+}
+
+.lighting-demo-tag {
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: #fff2d9;
+  color: #805b19;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+
 .demo-card-note {
   margin: 12px 0 0;
   padding-top: 11px;

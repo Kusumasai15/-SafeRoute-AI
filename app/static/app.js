@@ -147,15 +147,22 @@ function renderRoutes() {
 
     const statistics = node('div', undefined, 'demo-statistics');
     const lighting = route.lighting || {};
-    const lightingLabel = lighting.lighting_source === 'demo_ml_estimate'
-      ? 'Demo ML estimate'
-      : lighting.lighting_source === 'demo_data_fallback'
-        ? 'Demo data fallback'
-        : 'Demo data unavailable';
+    const lightingLabel = lighting.lighting_source === 'demo_ml_nearby'
+      ? 'ML nearby samples'
+      : lighting.lighting_source === 'demo_ml_synthetic_profile'
+        ? 'ML synthetic profile'
+        : 'Rule-based synthetic fallback';
+    const lightingCard = node('div', undefined, 'demo-stat lighting-rating');
+    const lightingHeading = node('div', undefined, 'lighting-rating-heading');
+    lightingHeading.append(
+      node('strong', `Lighting ${score(lighting.lighting_score)}`),
+      node('span', 'DEMO', 'lighting-demo-tag')
+    );
+    lightingCard.append(lightingHeading, node('small', lightingLabel));
     statistics.append(
       statistic(score(demo?.demo_safety_score), 'Safety · DEMO'),
       statistic(score(demo?.demo_crime_index), 'Crime Risk · DEMO'),
-      statistic(score(lighting.lighting_score), `Lighting: ${lightingLabel}`)
+      lightingCard
     );
     card.append(statistics);
     const facilities = node('div', undefined, 'route-facilities');

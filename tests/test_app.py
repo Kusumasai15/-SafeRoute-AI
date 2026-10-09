@@ -148,6 +148,12 @@ def test_three_route_options(client, monkeypatch, mode):
     assert [r['preference'] for r in response.json['routes']] == ['balanced', 'short', 'alternative']
     assert [r['id'] for r in response.json['routes']] == [0, 1, 2]
     assert response.json['warnings'] == []
+    assert all(isinstance(route['lighting']['lighting_score'], (int, float))
+               and 0 <= route['lighting']['lighting_score'] <= 100
+               for route in response.json['routes'])
+    assert all(route['lighting']['lighting_source'] in {
+        'demo_ml_nearby', 'demo_ml_synthetic_profile', 'demo_rule_fallback'
+    } for route in response.json['routes'])
 
 def test_third_route_failure_retains_routes(app, monkeypatch):
     def fetch(path, params):
@@ -224,8 +230,9 @@ def check_hash(value):
 def test_route_recommendation_uses_time_then_distance(client, monkeypatch):
     from app import routes as route_module
     monkeypatch.setattr(route_module, 'analyze_demo_route', lambda geometry: dict(demo_safety_score=None, demo_crime_index=None))
-    monkeypatch.setattr(route_module, 'score_route_lighting', lambda route: dict(
-        lighting_score=None, lighting_source='unavailable', lighting_label='DEMO lighting unavailable'))
+    monkeypatch.setattr(route_module, 'score_route_lighting', lambda route, mode: dict(
+        lighting_score=73.0, lighting_source='demo_ml_synthetic_profile',
+        lighting_label='DEMO · ML synthetic profile'))
     candidates = [
         dict(duration=900, distance=1000, geometry=feature()['geometry']),
         dict(duration=600, distance=1500, geometry=feature()['geometry']),
@@ -247,9 +254,9 @@ def test_demo_recommendation_compares_all_routes(client, monkeypatch):
     monkeypatch.setattr(route_module, 'analyze_demo_route', lambda geometry: dict(
         demo_safety_score=[20, 90, 50][geometry['index']],
         demo_crime_index=[80, 10, 50][geometry['index']]))
-    monkeypatch.setattr(route_module, 'score_route_lighting', lambda route: dict(
+    monkeypatch.setattr(route_module, 'score_route_lighting', lambda route, mode: dict(
         lighting_score=[20, 90, 50][route['geometry']['index']],
-        lighting_source='demo_data_fallback', lighting_label='DEMO data fallback'))
+        lighting_source='demo_ml_synthetic_profile', lighting_label='DEMO · ML synthetic profile'))
     response = client.post('/api/routes', json=dict(start=[17.4, 78.4], end=[17.42, 78.42], mode='walk'), headers=csrf(client))
     assert response.status_code == 200
     assert [route['recommended'] for route in response.json['routes']] == [False, True, False]
@@ -259,6 +266,7 @@ def test_demo_recommendation_compares_all_routes(client, monkeypatch):
     assert response.json['routes'][0]['demo']['demo_crime_index'] == 80
     assert 'demo_crime_rate' not in response.json['routes'][0]['demo']
     assert response.json['routes'][1]['lighting']['lighting_score'] == 90
+    assert all(0 <= route['lighting']['lighting_score'] <= 100 for route in response.json['routes'])
 
 
 def test_places_enforce_five_kilometres_and_deduplicate(client, monkeypatch):
@@ -315,4 +323,4 @@ def test_home_exposes_navigation_and_facility_controls(client):
     assert b'id="follow"' in response.data
     assert b'id="recenter"' in response.data
     assert b'id="facility-toggles"' in response.data
-    assert b'Demo ratings generated using synthetic data and are not verified real-world safety or lighting conditions.' in response.data
+    assert b'Lighting ratings are simulated for demonstration purposes and do not represent actual street-lighting conditions.' in response.data

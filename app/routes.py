@@ -88,7 +88,7 @@ def routes():
                 "safety_score": None,
                 "recommendation": None,
             }
-        candidate["lighting"] = score_route_lighting(candidate)
+        candidate["lighting"] = score_route_lighting(candidate, data["mode"])
 
     recommend_routes(result["routes"])
 
