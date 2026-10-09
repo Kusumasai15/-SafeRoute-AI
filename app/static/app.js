@@ -8,6 +8,26 @@ const FACILITY_CATEGORIES = [
 const state = {start:null,end:null,routes:[],selected:0,watch:null,navGeneration:0,position:null,lastHeading:null,lastMovement:null,lastArrowPosition:null,followMap:true,navIndex:0,layers:[],helpLayers:[],endpoints:[],marker:null,accuracy:null,requestId:0,facilityRequestId:0,lastFacilityPosition:null,lastFacilityRequestPosition:null,lastFacilityRefresh:0,facilityTimer:null,facilityVisible:new Set(FACILITY_CATEGORIES.map(category=>category.id))};
 const token = document.querySelector('meta[name="csrf-token"]').content;
 let map = null;
+const themeToggle = $('theme-toggle');
+function setTheme(theme, save = false) {
+  document.documentElement.dataset.theme = theme;
+  const nextTheme = theme === 'dark' ? 'light' : 'dark';
+  $('theme-toggle-icon').textContent = nextTheme === 'dark' ? '🌙' : '☀️';
+  $('theme-toggle-label').textContent = nextTheme === 'dark' ? 'Dark' : 'Light';
+  themeToggle.setAttribute('aria-label', `Switch to ${nextTheme} theme`);
+  themeToggle.setAttribute('aria-pressed', String(theme === 'dark'));
+  if (save) {
+    try {
+      localStorage.setItem('safewalk-theme', theme);
+    } catch (error) {
+      console.warn('Theme preference could not be saved:', error);
+    }
+  }
+}
+setTheme(document.documentElement.dataset.theme || 'light');
+themeToggle.addEventListener('click', () => {
+  setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true);
+});
 if (typeof L !== 'undefined') {
   map = L.map('map',{zoomControl:false}).setView([22.5,79],5);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
@@ -155,7 +175,7 @@ function renderRoutes() {
     const lightingCard = node('div', undefined, 'demo-stat lighting-rating');
     const lightingHeading = node('div', undefined, 'lighting-rating-heading');
     lightingHeading.append(
-      node('strong', `Lighting ${score(lighting.lighting_score)}`),
+      node('strong', score(lighting.lighting_score)),
       node('span', 'DEMO', 'lighting-demo-tag')
     );
     lightingCard.append(lightingHeading, node('small', lightingLabel));

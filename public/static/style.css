@@ -185,3 +185,176 @@
   font-weight: 400;
   color: #64766f;
 }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e6eee9;
+  --muted: #adbbb3;
+  --green: #75d2a8;
+  --pale: #203b30;
+  --border: #3a5045;
+  --paper: #111a17;
+  --red: #ff9aa5;
+  --surface: #192520;
+  --surface-raised: #202e28;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --ink: #e6eee9;
+    --muted: #adbbb3;
+    --green: #75d2a8;
+    --pale: #203b30;
+    --border: #3a5045;
+    --paper: #111a17;
+    --red: #ff9aa5;
+    --surface: #192520;
+    --surface-raised: #202e28;
+  }
+}
+
+body,
+.topbar,
+.planner,
+button,
+.button,
+input,
+select,
+textarea,
+.suggestions,
+.route-card,
+.demo-stat,
+.nav-panel,
+.map-hint,
+dialog,
+.login-card,
+.review-card,
+#map-failure {
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+  .theme-toggle {
+    gap: 0;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    padding: 6px;
+  }
+
+  .theme-toggle-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] dialog {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+:root[data-theme="dark"] .topbar,
+:root[data-theme="dark"] .planner,
+:root[data-theme="dark"] .suggestions,
+:root[data-theme="dark"] .nav-panel,
+:root[data-theme="dark"] dialog,
+:root[data-theme="dark"] .login-card,
+:root[data-theme="dark"] .review-card,
+:root[data-theme="dark"] #map-failure {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] button,
+:root[data-theme="dark"] .button,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] .route-card,
+:root[data-theme="dark"] .demo-stat,
+:root[data-theme="dark"] .map-hint,
+:root[data-theme="dark"] .facility-toggle {
+  color: var(--ink);
+  background-color: var(--surface-raised);
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] button:hover,
+:root[data-theme="dark"] .button:hover,
+:root[data-theme="dark"] .route-card:hover,
+:root[data-theme="dark"] .route-card.selected {
+  background-color: var(--pale);
+}
+
+:root[data-theme="dark"] .route-card.selected {
+  border-color: var(--green);
+}
+
+:root[data-theme="dark"] .route-title small,
+:root[data-theme="dark"] .demo-stat strong,
+:root[data-theme="dark"] .route-travel strong {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .demo-stat small,
+:root[data-theme="dark"] .demo-card-note {
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .primary {
+  color: #071a12;
+  background: #75d2a8;
+  border-color: #75d2a8;
+}
+
+:root[data-theme="dark"] .primary:hover {
+  background: #91e2bc;
+}
+
+:root[data-theme="dark"] .emergency {
+  color: #ffb0b8;
+  background: #48252c;
+  border-color: #70404a;
+}
+
+:root[data-theme="dark"] .demo-badge,
+:root[data-theme="dark"] .lighting-demo-tag {
+  color: #f5d78c;
+  background: #4b3d22;
+}
+
+:root[data-theme="dark"] .route-recommendation,
+:root[data-theme="dark"] a,
+:root[data-theme="dark"] .planner-footer a {
+  color: var(--green);
+}
+
+:root[data-theme="dark"] .audit-line {
+  background: var(--pale);
+}
+
+:root[data-theme="dark"] .map-shell {
+  background: #1b2822;
+}
+
+:root[data-theme="dark"] option {
+  color: var(--ink);
+  background: var(--surface-raised);
+}

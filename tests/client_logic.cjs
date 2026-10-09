@@ -61,6 +61,7 @@ const facilities=[
 ];
 const context=vm.createContext({
   document:{
+    documentElement:{dataset:{theme:'light'}},
     getElementById:get,querySelector:()=>({content:'test-token'}),createElement:()=>new Element(),
     querySelectorAll:selector=>selector==='.facility-list-item'?get('help-list').children:[],
     addEventListener(){},
@@ -98,6 +99,14 @@ const textContent=element=>element.textContent+element.children.map(textContent)
 const position=(longitude,latitude=17,accuracy=8,heading=null,speed=0)=>({coords:{longitude,latitude,accuracy,heading,speed},timestamp:Date.now()});
 
 (async()=>{
+  assert.equal(run('document.documentElement.dataset.theme'),'light');
+  assert.equal(get('theme-toggle-label').textContent,'Dark');
+  get('theme-toggle').listeners.click();
+  assert.equal(run('document.documentElement.dataset.theme'),'dark');
+  assert.equal(get('theme-toggle-label').textContent,'Light');
+  assert.equal(storage.get('safewalk-theme'),'dark','Theme preference is persisted');
+  get('theme-toggle').listeners.click();
+  assert.equal(run('document.documentElement.dataset.theme'),'light');
   assert.equal(get('map-failure').hidden,true,'Available Leaflet must not show a map-load error');
   assert.equal(run('minutes(3600)'),'1 h 0 min');
   assert.equal(run('km(1500)'),'1.5 km');
@@ -112,7 +121,7 @@ const position=(longitude,latitude=17,accuracy=8,heading=null,speed=0)=>({coords
   const cards=get('route-cards').children,firstStats=cards[0].children[2].children,secondStats=cards[1].children[2].children;
   assert.equal(firstStats[0].children[0].textContent,'0/100','Valid zero safety score must render');
   assert.equal(firstStats[1].children[0].textContent,'0/100','Valid zero crime index must render');
-  assert.equal(firstStats[2].children[0].children[0].textContent,'Lighting 76/100','Lighting ML score renders prominently on its route');
+  assert.equal(firstStats[2].children[0].children[0].textContent,'76/100','Lighting ML score renders without a prefix');
   assert.equal(firstStats[2].children[0].children[1].textContent,'DEMO','Lighting has a DEMO badge');
   assert.match(firstStats[2].children[1].textContent,/ML nearby samples/);
   assert.doesNotMatch(textContent(cards[0]),/Sample incidents/,'Incidents are not displayed in route cards');
@@ -196,10 +205,10 @@ const position=(longitude,latitude=17,accuracy=8,heading=null,speed=0)=>({coords
   const routeCards=get('route-cards').children;
   assert.equal(routeCards[0].children[2].children[0].children[0].textContent,'82/100','Safety is route-specific');
   assert.equal(routeCards[0].children[2].children[1].children[0].textContent,'23/100','Crime risk is route-specific');
-  assert.equal(routeCards[0].children[2].children[2].children[0].children[0].textContent,'Lighting 76/100','Lighting is route-specific');
+  assert.equal(routeCards[0].children[2].children[2].children[0].children[0].textContent,'76/100','Lighting is route-specific');
   assert.match(textContent(routeCards[1]),/65\/100/,'Another route has a distinct lighting value');
   assert.match(textContent(routeCards[1]),/Rule-based synthetic fallback/);
-  assert.match(textContent(routeCards[2]),/Lighting 82\/100/,'Each route renders its calculated numeric rating');
+  assert.match(textContent(routeCards[2]),/82\/100/,'Each route renders its calculated numeric rating');
   assert.match(textContent(routeCards[2]),/ML synthetic profile/);
   assert.match(textContent(routeCards[0]),/★ Demo Recommended/);
   assert.doesNotMatch(html,/lighting-toggle|OSM lighting evidence/,'The real street-lamp overlay controls are removed');

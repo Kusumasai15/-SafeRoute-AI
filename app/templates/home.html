@@ -2,10 +2,15 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="csrf-token" content="{{ csrf }}"><title>SafeWalk · Your journey, simplified</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script>
+(()=>{let theme;try{theme=localStorage.getItem('safewalk-theme');}catch{}
+if(theme!=='dark'&&theme!=='light')theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+document.documentElement.dataset.theme=theme;})();
+</script>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=asset_version) }}"></head>
 <body>
 <header class="topbar"><a class="brand" href="/" aria-label="SafeWalk home"><span class="brand-icon">S</span>SafeWalk<span class="tag">Journey companion</span></a>
-<nav><button data-open="contacts-dialog">Contacts</button><button data-open="reports-dialog">Reports</button><button class="emergency" data-open="emergency-dialog">Emergency help</button></nav></header>
+<nav><button data-open="contacts-dialog">Contacts</button><button data-open="reports-dialog">Reports</button><button class="emergency" data-open="emergency-dialog">Emergency help</button><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false"><span id="theme-toggle-icon" aria-hidden="true">🌙</span><span id="theme-toggle-label">Dark</span></button></nav></header>
 <main class="workspace">
 <aside class="planner"><div class="eyebrow">LET’S GET YOU THERE</div><h1>A clearer way<br>to your destination.</h1><p class="muted">Plan your route. Stay connected. Find help nearby.</p>
 <form id="plan-form">
